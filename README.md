@@ -10,8 +10,8 @@
    struct RClass {
      struct RBasic basic;
      struct st_table *iv_tbl;
-     struct st_table *m_tbl;	# for storing methods
-     VALUE super;			# pointer to superclass
+     struct st_table *m_tbl;	// for storing methods
+     VALUE super;		// pointer to superclass
    };
    ```
   * Other Resources - 
@@ -23,7 +23,19 @@
 
   * Metaclass -
     - a class that an object uses to redefine itself - the object can be a Class object or some normal object (or worse, some metaclass object)
-    - an object can redefine a method by creating a class in a specific way - "class << m; def <method>; <xyz work>; end; end;" or "def m.<method>; <xyz work>; end"
+    - an object can redefine a method by creating a class in a specific way
+     ```Ruby
+       class << m 
+         def <method>
+           <xyz work>
+         end
+       end
+     ```
+     ```Ruby
+       def m.<method>
+         <xyz work>
+       end
+      ```
     - they hold instance methods, like "Class" objects, and can be attached to an object which can use these methods (now called "singleton methods")
     - as stated above, metaclasses stores all class methods as well
     - IMP: each object has its own metaclass, hence, it can have its own instance method too created at runtime, the infra for which can be setup in its class
