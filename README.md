@@ -80,6 +80,13 @@
 
   * instance\_eval
     - this method is used to create a method for a class which isn't visible to the instances of the class (ie, it gets added to the metaclass of the class)
+    - can be used to create a method specific to an object as well (note: class is also an object so if used with class, then the method goes to metaclass of class)
 
   * class\_eval
     - this method is used to create a method for a class which is visible to every instance of the class (ie, it becomes part of the metaclass of every instance)
+
+  * send()
+
+  * respond\_to?
+
+  * remove\_method and undef\_method
