@@ -110,9 +110,3 @@
 
   * class\_eval
     - this method is used to create a method for a class which is visible to every instance of the class (ie, it becomes part of the metaclass of every instance)
-
-  * send()
-
-  * respond\_to?
-
-  * remove\_method and undef\_method
