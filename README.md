@@ -8,7 +8,7 @@
   * Class::Class (parent Module) - new, superclass
   * send() - foo.method is equivalent to foo.send(:method)
   * method(method\_name) - returns the method object that hold method\_name
-  * respond\)to? - checks if an object can respond to a given method (can be used instead of re-defining method\_missing)
+  * respond\_to? - checks if an object can respond to a given method (can be used instead of re-defining method\_missing)
   * clone and freeze - object references are stored always (like node/python) and hence "=" leads to shallow copy. use "clone" for deep copy to avoid changing the
     original object. "freeze" can be used to make an object immutable and "frozen?" tells whether an object is mutable or not.
   * singleton\_method and singleton\_class - 
