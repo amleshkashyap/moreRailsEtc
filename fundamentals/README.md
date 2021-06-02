@@ -39,4 +39,16 @@
   * No booleans - TrueClass, FalseClass and NilClass for true, false, and nil. also, true != 1, and false != 0 as they're separate objects themselves of those classes.
 
 # Objects -
-  * 
+  * A very funny sentence says - method arguments are passed by value rather than reference - in C passing by reference would mean using * or &, but here even though a reference is being passed, it's actually a value (appropriate to call it value? why not variable or literal) which happens to be an object reference.
+  * Garbage collection obviously, for objects with no references or references from other objects with no references. Avoid global variables as caches (or use some regular deletion mechanism). Every object is uniquely identified via a Fixnum identifier (constant, unique till object exists in memory). Can be obtained via object\_id method or \_\_id\_\_ keyword in case the former is overridden. hash method implemented to return this object\_id.
+  * class and type problem - respond\_to? method has a shortcoming that it doesn't check the arguments (just method name). Hence, one can override a method of one class in a different class with a different argument and use it incorrectly. There is nothing called type, and it's merely the fact that objects from 2 different class might work with same methods throughout their lifetime and hence might appear to be same - but the arguments to those methods might be different (by, say, class, ie, one takes only String arguments, other takes only Fixnums) thus creating the concept of type - ie, the set of methods an object can respond to rather than just the class of the object.
+  * equal? method - compares whether 2 operands refer to the same object. same as comparing object\_id for both operands (operands are literals refering to objects).
+  * == method - same as equal? method in Object. Other classes override (eg, String to compare same characters). numerical classes do type conversions while overriding '==' so that equality is possible to check for different classes, ie, Fixnum/Float. String/Array/Hash might do a class (or type?) comparison first, by calling some method (eg, to\_str) on the right hand operand (to convert it to string? - bit unclear - can we have '1' == 1 or 1 == '1' return true? not on my irb), and then using its '==' operator to compare with left operand. != doesn't have to be a separate method, basically invert the result of '==' method.
+  * eql? method - same as equal?, but generally can be overridden to emulate a '==' without the conversions (eg, Fixnum to Float etc).
+  * === method - same as '==' method unless overridden (eg, Range, Regexp (checks if a string satisfies regex), Class, Symbol (matches with string too)).
+  * =~ method - only for String/Regexp pattern matching.
+  * Order - already discussed with Ranges, <=> method should return -1, 0, 1, nil only. If defined, elements are ordered (eg, Numeric, String). Comparable is a mixin that has <, <=, =, >= and > methods (among others like between?) and is included with classes defining <=>. With all this flexibility, it is possible to have a class where <=> and == can return different results for equality comparison, although not recommended.
+
+# More On Objects -
+  * Explicity conversion - to\_s, to\_i, etc - in fancy words, "methods which return a representation of an object as a value of another class"
+  * Boolean type conversions - anything except false/nil behaves like true (although true is a different object). no way to convert string to boolean. 0.0/0 also behaves like true.
