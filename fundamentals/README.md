@@ -39,7 +39,7 @@
   * No booleans - TrueClass, FalseClass and NilClass for true, false, and nil. also, true != 1, and false != 0 as they're separate objects themselves of those classes.
 
 # Objects -
-  * A very funny sentence says - method arguments are passed by value rather than reference - in C passing by reference would mean using * or &, but here even though a reference is being passed, it's actually a value (appropriate to call it value? why not variable or literal) which happens to be an object reference.
+  * A very funny sentence says - method arguments are passed by value rather than reference - in C passing by reference would mean using * or &, but here even though a reference is being passed, it's actually a value (appropriate to call it value? why not variable/identifier/token name) which happens to be an object reference.
   * Garbage collection obviously, for objects with no references or references from other objects with no references. Avoid global variables as caches (or use some regular deletion mechanism). Every object is uniquely identified via a Fixnum identifier (constant, unique till object exists in memory). Can be obtained via object\_id method or \_\_id\_\_ keyword in case the former is overridden. hash method implemented to return this object\_id.
   * class and type problem - respond\_to? method has a shortcoming that it doesn't check the arguments (just method name). Hence, one can override a method of one class in a different class with a different argument and use it incorrectly. There is nothing called type, and it's merely the fact that objects from 2 different class might work with same methods throughout their lifetime and hence might appear to be same - but the arguments to those methods might be different (by, say, class, ie, one takes only String arguments, other takes only Fixnums) thus creating the concept of type - ie, the set of methods an object can respond to rather than just the class of the object.
   * equal? method - compares whether 2 operands refer to the same object. same as comparing object\_id for both operands (operands are literals refering to objects).
@@ -64,3 +64,19 @@
   * Marshaling - Marshal.dump - converts given object (and any objects it references) to binary and optionally writes it to an I/O stream object. Marshal.load does opposite. Binary format used is version dependent. Also, useful for writing deep copy methods (ie, Marshal.load(Marshal.dump)). YAML is similar, only it converts to human readable text format.
   * Freezing - It restricts any mutations on the object. A frozen class object would mean can't add any methods to the class.
   * Tainting - To inform about potential security problems, identify and prevent them accordingly, an object can be marked as tainted. Any objects created from the original tainted object (eg, via clone/dup, via substring, or upcase, etc) are also marked tainted. $SAFE global variable can be utilized to tell what to restrict for these tainted objects. All command line arguments, env variables, and command line inputs using gets are tainted by default.
+
+# Expressions -
+  * If a . or :: appears in an expression, it's treated as a method call and constant respectively (:: allowed for method call as well).
+  * Uninitialized vars/consts - (1) Class vars - throws name error, (2) Global vars - assumea nil, (3) Instance vars - assumes nil, (4) Local vars - (a) check if it's method, (b) if not, then throw name error, (c) local vars come to existence only after they've been assigned a value, (d) one exception to (c) is that even if they've not been assigned a value but there's a conditional statement which can assign them a value if true, then they're treated as local variables with nil value, (5) Constants - don't exist and throw a name error if not assigned
+  * Methods calls - assumed to be on self if no object used. 
+    * Code blocks can be passed after method calls (ie, after arguments). 
+    * Ruby objects don't expose associated variables rather expose functions (see attr\_accessors). 
+    * Other exs. a[0] and a.[](0) are same, obj.length=(3) and obj.length = 3 are same (assume length= is defined), arr[x] = y and arr.[]=(x, y) are same. With all these examples, it is obvious that a lot of operators are defined as methods and can be overridden in other classes. 
+    * Global functions - functions in the Kernel module (eg, puts). These functions are also private to Object class, and hence, are implicitly invocable in any context.
+    * super - reserved word, passes arguments of current method to method with same name in superclass.
+
+# Assignments -
+  * Parallel - all assignments happen in parallel and results might differ if done sequentially. Avoid these in general.
+    * Same lvalues and rvalues - assume 2 arrays and assign values by index
+    * One lvalue, 1+ rvalue - x = 1, 2, 3 would be x = [1, 2, 3] but x, = 1, 2, 3 would be x = 1 (assumes more lvalues and ignores them)
+    * 1+ lvalues, One rvalue - if rvalue has to\_ary method, invoke it to make an ar
