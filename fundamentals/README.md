@@ -15,7 +15,7 @@
   * For a size n array, attempting to insert at n+2 doesn't throw an error, just creates a nil entry at n+1. Although doing so before first index throws an error.
   * Special cases - (1) %w[this is a test] = ['this', 'is', 'a', 'test'], (2) %w| ( [ { < | = ['(', '[', '{', '<'], (3) %W(\s \t \r \n) = ["\s", "\t", "\r", "\n"]
   * Subarray access possible - arr[0,5] returns 5 elements starting from index 0.
-  * + can be used to concatenate 2 arrays only. - can be used to eliminate all instances of all elements of the right side array from the left one. * can be used for replicating the elements of an array.
+  * "+" can be used to concatenate 2 arrays only. - can be used to eliminate all instances of all elements of the right side array from the left one. * can be used for replicating the elements of an array.
   * Check - compact!, delete\_if, each\_index, fill, flatten!, index, join, reverse\_each, rindex, shift, uniq!, unshift
 
 # Hashes -
@@ -49,6 +49,18 @@
   * =~ method - only for String/Regexp pattern matching.
   * Order - already discussed with Ranges, <=> method should return -1, 0, 1, nil only. If defined, elements are ordered (eg, Numeric, String). Comparable is a mixin that has <, <=, =, >= and > methods (among others like between?) and is included with classes defining <=>. With all this flexibility, it is possible to have a class where <=> and == can return different results for equality comparison, although not recommended.
 
-# More On Objects -
-  * Explicity conversion - to\_s, to\_i, etc - in fancy words, "methods which return a representation of an object as a value of another class"
+# Object Conversions -
+  * Explicit conversion - to\_s, to\_i, etc - in fancy words, "methods which return a representation of an object as a value of another class"
+  * Implicit conversion - eg, in 1.8, the Exception class was almost identical to String class (ie, one's object converted to another while comparison). Implicit conversions exist other places as well, not well documented.
+    * Back to the "==" method for String, if both sides are String, they're compared, if not, the right-hand operand is checked for to\_str method, and if it exists, then the "==" method of the class to which the right-hand operator belongs to is invoked and asked to decide.
+    * try\_convert method in 1.9, whose argument is tried to be converted to the relevant class (ie, String.try\_convert(s) tries to convert to String) and returns nil if not possible.
+  * Kernel Module Conversion Functions - they attempt to convert the arguments to the same class as their names, and if not possible, return different results - Array (tries converting using to\_ary, then to\_a, then returns a new array with the argument as its element), Float (converts Numeric types to Float directly, else calls to\_f), Integer (truncates Floats, String no non-numeric trailing characters allowed, for the rest tries to\_int and then to\_i), String (just the to\_s method).
+  * Coerce - returns an array of 2 elements of same type - (1) the type can be same as the object on which it's called, (2) can be a more generic type than both the object and the argument.
+    * Numeric operators like "+" - if they encounter a right-hand operator with unknown type (eg, Rational from standard library), then they call the coerce method on the right-hand operand with left-hand as the argument, thus returning the result in right-hand operator type, followed by calling the "+" operator of the right-hand type object. eg, Fixnum + Rational will call Rational.coerce(Fixnum) = [Rational, Rational] and then add those Rationals.
   * Boolean type conversions - anything except false/nil behaves like true (although true is a different object). no way to convert string to boolean. 0.0/0 also behaves like true.
+
+# Object Operations -
+  * Copying - clone, dup - they call the initialize\_copy method of the class they're invoked on - if not defined, then a simple shallow copy is performed. Classes can override these two and defined initialize\_copy. clone can copy frozen and tainted states of an object, as well as any singleton methods it has - dup can only copy the tainted state, calling on frozen object unfreezes it.
+  * Marshaling - Marshal.dump - converts given object (and any objects it references) to binary and optionally writes it to an I/O stream object. Marshal.load does opposite. Binary format used is version dependent. Also, useful for writing deep copy methods (ie, Marshal.load(Marshal.dump)). YAML is similar, only it converts to human readable text format.
+  * Freezing - It restricts any mutations on the object. A frozen class object would mean can't add any methods to the class.
+  * Tainting - To inform about potential security problems, identify and prevent them accordingly, an object can be marked as tainted. Any objects created from the original tainted object (eg, via clone/dup, via substring, or upcase, etc) are also marked tainted. $SAFE global variable can be utilized to tell what to restrict for these tainted objects. All command line arguments, env variables, and command line inputs using gets are tainted by default.
