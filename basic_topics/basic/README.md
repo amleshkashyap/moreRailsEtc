@@ -71,7 +71,7 @@
   * Methods calls - assumed to be on self if no object used. 
     * Code blocks can be passed after method calls (ie, after arguments). 
     * Ruby objects don't expose associated variables rather expose functions (see attr\_accessors). 
-    * Other exs. a[0] and a.[](0) are same, obj.length=(3) and obj.length = 3 are same (assume length= is defined), arr[x] = y and arr.[]=(x, y) are same. With all these examples, it is obvious that a lot of operators are defined as methods and can be overridden in other classes. 
+    * Other exs - "a[0]" and "a.[](0)" are same, obj.length=(3) and obj.length = 3 are same (assume length= is defined), arr[x] = y and arr.[]=(x, y) are same. With all these examples, it is obvious that a lot of operators are defined as methods and can be overridden in other classes. 
     * Global functions - functions in the Kernel module (eg, puts). These functions are also private to Object class, and hence, are implicitly invocable in any context.
     * super - reserved word, passes arguments of current method to method with same name in superclass.
 
@@ -80,3 +80,6 @@
     * Same lvalues and rvalues - assume 2 arrays and assign values by index
     * One lvalue, 1+ rvalue - x = 1, 2, 3 would be x = [1, 2, 3] but x, = 1, 2, 3 would be x = 1 (assumes more lvalues and ignores them)
     * 1+ lvalues, One rvalue - if rvalue has to\_ary method, invoke it to make an ar
+
+# Operators - 
+  * 
