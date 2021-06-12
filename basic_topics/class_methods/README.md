@@ -11,9 +11,77 @@
     instead we have "fun({:a=>1}) == fun :a=>1".
   * 
 
-# Procs, Block, Lambda - Towards Functional Style
-  * A break without a loop acts like a return.
-  * proc and lambdas are two objects which can be created from a block (which is not an object) - both belong to Proc class.
-  * return in a proc block created using Proc.new will lead to an exit from the method (where it's created) after being called. This leads to the following scenario -
-    when a proc1 is being built using Proc.new in another meth2 by an invocation in meth1, and after creating the proc1, it returns it to meth1, which then calls it
-    using proc1.call, then, control flow 
+# Blocks -
+  * Pass block of code to methods (after the list of arguments) and then invoke the computation in the block - 
+    - using yield (nothing to be mentioned about the block in the method's formal parameters)
+    - using call (formal parameters must include '&block' as the last argument and the block is invoked using 'block.call' - yield can be used here too actually)
+    - Latter method is for better readability and reduces ambiguity (should be preferred almost always?)
+    - Here, 'block' becomes a Proc object instead of being a block. This doesn't imply all Proc objects have to be mentioned with '&' in formal parameters
+  * Blocks can encapsulate larger expressions/statements - eg, pass a for loop as an argument to another method - what're the practical use cases?
+  * Blocks can use local vars/arguments defined outside it (belonging to the method) - this property leads to existence of closures (similar to the JS closures mostly).
+  * Blocks can have parameters, will call them block\_params always and not change any other lingo.
+  * 1.8 - if any vars/args outside the block are used as params/locals inside the block, then updating them means updating them outside the block too.
+  * 1.9 - all block params are local to the block despite name clashes. also, provision to define block local variables with name clashes too.
+  * Basically - 
+    - in 1.8, the local vars/args of the method with same names are shared between method and block (which has consequences when working with closures).
+    - in 1.9, block\_params are always local despite name clashes, but vars local to the block/method are shared by default and can cause problems.
+  * "&" is used before a formal parameter to represent a Proc object (or to indicate a possible block that needs to be converted to a Proc object). It can be used
+    before actual parameters too as long as those objects have a to\_proc method (method's class also defines it, facilitating passing a method as an argument to
+    iterators). Other use cases too.
+  * "\*" is used before a formal parameter to represent an array of params, while it can be used before an actual param to indicate an array to be unpacked.
+
+# proc and lambda -
+  * Class "Proc" has objects of type - lambda, proc. lambda is like a method/function, proc is like a block. "lambda?" method to differentiate Proc objects.
+  * One way to create a proc is via using '&block' argument and passing a block at invocation.
+  * (a) Proc.new \<block\>, or just, (Kernel.)proc \<block\> (for proc), (b).(i) (Kernel.)lambda \<block\> (for lambda), (ii) lambda {|x| p x} == ->(x){ p x }, 
+    (iii) also, (ii) supports default arguments, eg, ->(x, y=2){ p x, y }
+  * proc/lambda objects to be invoked using call method. any object with call method can be invoked via .() as well, ie, proc.call(x) == proc.(x) { == proc[x] }
+  * lambda, like proc, isn't a block - passing lambda to a method expecting a block would mean using '&' before the lambda based block in actual arguments - avoid.
+  * There's a concept of arity, ie, number of arguments to the block, which get confusing when arguments can variable (ie, uses \*). Ignoring.
+  * Two Proc objects will return true for equality test when created using clone/dup methods - write a parser to identify equivalent blocks in a large codebase?
+
+# Closures - 
+  * lambdas/procs can be defined inside a method using blocks, and these blocks can use the local vars/args of the method.
+  * These Proc objects can then be created outside the method using specific argument "values" to the method (ie, the method would return lambdas/procs specifically
+    created using those "values"). Now these procs/lambdas must be able to retain those "values" if they're to be of any use, ie, when they're invoked after creation.
+  * Achieving this forces the interpreter to store more information, thus leading to multiple potential benefits - in fact, looks like all the vars/args of the
+    method inside which these lambdas/procs are defined, are stored till the lifetime of these lambdas/procs. This property is called closure.
+    - Does the interpreter store updates these variables specifically to provide a separate feature (ie, to have dynamic/changing values - instead of fixed values) or
+      it had to return for some other reason and thus it was easy to add this capability too?
+  * Above creates the concept of shared variable among procs/lambdas (created within the same method) - ie, one of them can change it, and other works on this 
+    changed value (eg, a setter/getter method) - this seems to be the foundation for Classes/OOP (similar to JS).
+  * multiple lambdas/procs can be created using a loop inside a method - and these lambdas can in turn use the loop index as local variables which is a potential
+    source of bugs. Avoid.
+     ```Ruby
+       # simple example that works fine in 2.7
+       def multipliers(a, b, *args)
+         normal_lambda_one = ->(m){ a*m }
+         normal_lambda_two = lambda { |m| b*m }
+         lambda_array = []
+         args.map {|i| lambda_array.push(lambda {|y| i*y })}
+         return normal_lambda_one, normal_lambda_two, *lambda_array
+       end
+
+       single,double,triple,tetra = multipliers(1, 2, 3, 4)
+       single.call(1); single.call(2);  # 1, 2 - same in 1.8
+       double.call(1); double.call(2);  # 2, 4 - same in 1.8
+       triple.call(1); triple.call(2);  # 3, 6 - 4, 8 in 1.8
+       tetra.call(1); tetra.call(2);    # 4, 8 - same in 1.8
+     ```
+  * binding method on Proc object returns a Binding object with description for those closures (ie, Proc objects). Binding object can be passed as second argument
+    to eval method to provide context for evaluating the String using eval. Binding also seems to be the a general mechanism of storing information for methods.
+
+# Towards Functional Style
+  * return statement returns from the method where it's called. break without a loop acts as a return.
+  * return in a proc takes it outside the method obviously in normal cases. if a meth1 asks meth2 to create a proc from a block and return it so that it can "call" it,
+    and that block has a return statement, then after meth1 calls the proc, a jump error is thrown after executing the block, because, supposedly, there are two
+    returns, one from the block, and then another from meth2 which contains the block. My solution - don't do such things, I mean why do you want to use a return
+    in a block/proc. If needed, use lambda - where return statement leads to return from the lambda only. So many corner cases.
+  * break/next/redo/retry - avoid these in lambdas/blocks/procs.
+  * raise - exceptions inside a block/proc/lambda looks for a rescue clause inside the enclosing entity, followed by returning to the invoker method (ie, yield/call)
+  * Invocation semantics - method invocation follows a strict way to assign actual params to formal params (and throws errors for mismatches). lambdas have these
+    semantics. procs have more flexibility, ie, the assignments are similar to parallel assignment rules (ie, multiple lvalue/rvalue scenarios etc). Bunch of rules.
+    procs - yield semantics, lambdas - invocation semantics
+
+# Functional Programming
+  
