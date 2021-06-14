@@ -20,7 +20,7 @@
     - method can be converted to a Proc when passing as an argument - also, define\_method accepts a block to be converted to a method - that block can in turn be
       another method or proc object.
   * UnboundMethod class is interesting, it objects are methods which aren't bounded but can be bounded.
-    - They're like methods from Modules
+    - They're like methods from Modules. Method doesn't have 'bind' instance method, and 'unbind' instance method is not "in place" (ie, it returns a new object).
     - It's unclear whether unbounded methods can be non-object (like methods are by default). They're an object from this class, which can be used to create objects
       from Methods class via binding.
 
@@ -92,6 +92,28 @@
   * binding method on Proc object returns a Binding object with description for those closures (ie, Proc objects). Binding object can be passed as second argument
     to eval method to provide context for evaluating the String using eval. Binding also seems to be the a general mechanism of storing information for methods.
 
+# Iterators
+  * eg, times, each, map, upto - these are followed by a block. if each is defined for the object, then a for loop can be used to loop on the object.
+  * Basic iterator methods (meaning which iterate on the object based on defined ways and process the given block based on the iterations) -
+    - Integer - upto, downto, times - take an init value, then call the "succ" method till the end value is reached, or some count is satisfied. eg, 3.times { block }
+    - Float - ex, 0.step(Math::PI, 0.1) { block } goes from 0 till pi in steps of 0.1 (since no succ method defined for floats)
+    - String - each\_char, each\_byte, each\_line -  eg, "hello".each\_char { block }
+    - Enumerator object is a tuple - first element is an object, second element is an iterator method - he couldn't mention this simple thing to ease our lives.
+    - notice each iterator method is followed by a block - if there's no block, then the iterator method simply returns an Enumerator object,
+      ex, "hello".each\_char, [].each, 4.times, {}.each_with_index - we can call Enumerable module functions (eg, map/inject) on this
+  * Enumerables - Array, Hash, Range, etc - primarily "each" iterator and related iterators in the Enumerable module, eg, each\_with\_index
+    - others are collect/map (output/input same length), select, reject, inject/reduce (single output)
+  * Enumerators - convert an object to an Enumerator using to\_enum aka enum\_for (if done without an argument, "each" is considered the default)
+    - first argument to enum\_for should be an iterator method - following are the same -
+      ```Ruby
+        "hello".each\_char
+        Enumerator.new("hello", :each_char)
+        "hello".enum_for(:each_char)   # alternatively, "hello".to_enum(:each_char)
+        # all the above are supposed to work on ['h', 'e', 'l', 'l', 'o'] - "hello".chars also returns this array
+        "hello".enum_for(:each_char).map { |c| c.succ } == "hello".chars.map { |c| c.succ }  # ['i', 'f', 'm', 'm', 'p']
+      ```
+    - any arguments after the first are used as arguments to the iterator method. also, I will not remember all these syntaxes.
+
 # Towards Functional Style
   * return statement returns from the method where it's called. break without a loop acts as a return.
   * return in a proc takes it outside the method obviously in normal cases. if a meth1 asks meth2 to create a proc from a block and return it so that it can "call" it,
@@ -105,4 +127,7 @@
     procs - yield semantics, lambdas - invocation semantics
 
 # Functional Programming
-  
+  * Common functions - map, inject (inject is a reducer with an initial value to start the reduction with as the argument).
+  * Modules - Functional
+  * What are the implications on performance?
+  * How difficult to read the code and how many people use such paradigms?
