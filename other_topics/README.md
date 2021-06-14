@@ -19,7 +19,7 @@
   * Default External Encoding - this means the encoding used to read all other files (I/O) except for Ruby scripts.
     1. By default, it's picked up from the system's locale (env/bash settings). Also, there can be only 1 encoding for a single Ruby process. This is exactly what was being used in 1.8 and earlier to support an encoding other than ASCII for all the Ruby scripts.
     2. Can be specified via "-E"/"--encoding" options now. Only 1 per process though.
-    3. \_\_ENCODING\_\_, which gives Encoding object, can be used to get these - Encoding.default\_external and Encoding.locale\_charmap (from the locale).
+    3. Encoding.default\_external and Encoding.locale\_charmap (from the locale) - these are methods of the metaclass of Encoding class.
 
 # Program Execution -
   * Start Of Execution - Interpreter first looks for BEGIN statement, if found, executes related code block, and then returns back to line-1 to continue further execution. No main method.

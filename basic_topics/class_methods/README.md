@@ -1,4 +1,5 @@
-# Methods-1 -
+# Methods
+  * Not an object by default (like blocks), although can be converted into one with identical behavior.
   * undef (used to undefine methods) has an interesting use case - undefining a method in child class (which doesn't affect the parent class) - although it's not 
     common, rather redefine is used (like other OOP langs). Alternatively, can use undef\_method.
   * alias new\_name original\_name => for giving a new name to a method. Recall include? and member? methods from Range class which do the same thing post 1.9
@@ -9,9 +10,29 @@
     Ruby supports fun() with keys of the hash laid out in the open (only if it's the last argument though) in any order (bare hash) thus almost reaching there.
   * Method args don't need to be wrapped inside () - "fun(a) == fun a". Don't use this in above though, ie, "fun({:a=>1}) != fun {:a=>1}" throws a syntax error,
     instead we have "fun({:a=>1}) == fun :a=>1".
-  * 
+  * Methods have access only to their local variables - unlike blocks which can access even outside - thus methods can't help in creating closures (all below).
+    - so anything which is present in the definition of an entity isn't said to have a "binding" relationship, eg, local vars of methods/blocks aren't bindings.
+    - anything which outside the definition but a necessity in order for the entity to be useful is a "binding" relationship, eg, objects on which methods are called.
+    - apart from objects, methods aren't binded to anything else - although, they can be unbounded (ie, bound to nothing) - they do nothing until binded.
+  * Method class behaves similar to Proc class - its methods are to\_proc, arity, call (and hence, .(), []) - less efficient than invoking normally
+    - Can convert a method object to a lambda object by using '&' - which will convert using to\_proc
+    - method object invokation follows invokation semantics (hence more like lambda) and statements like return/rescue/break, etc behave similar as a method.
+    - method can be converted to a Proc when passing as an argument - also, define\_method accepts a block to be converted to a method - that block can in turn be
+      another method or proc object.
+  * UnboundMethod class is interesting, it objects are methods which aren't bounded but can be bounded.
+    - They're like methods from Modules
+    - It's unclear whether unbounded methods can be non-object (like methods are by default). They're an object from this class, which can be used to create objects
+      from Methods class via binding.
 
-# Blocks -
+    ```Ruby
+      plus = Fixnum.instance_method('+')  # unbound method plus, can't be invoked using plus.call/plus[]/plus.()
+      plus_two = plus.bind(2)  # plus_two is binded to 2, plus remains unbounded
+      plus_two.call(3)  # returns 2 + 3 = 5
+      plus_again = plus_two.unbind  # plus_again is unbounded, plus_two remains bounded
+    ```
+
+# Blocks
+  * Not an object by default but can be converted into one - multiple options available with varying properties (lambda and proc).
   * Pass block of code to methods (after the list of arguments) and then invoke the computation in the block - 
     - using yield (nothing to be mentioned about the block in the method's formal parameters)
     - using call (formal parameters must include '&block' as the last argument and the block is invoked using 'block.call' - yield can be used here too actually)
