@@ -113,6 +113,8 @@
         "hello".enum_for(:each_char).map { |c| c.succ } == "hello".chars.map { |c| c.succ }  # ['i', 'f', 'm', 'm', 'p']
       ```
     - any arguments after the first are used as arguments to the iterator method. also, I will not remember all these syntaxes.
+    - Apart from using them for applying Enumerable module functions, they can also be used to prevent bugs - eg, if passing an array as an argument, then
+      converting it to Enumerator (eg, array.to\_enum) before passing will give an immutable object (thus no need for deep copy to prevent object changes).
 
 # Towards Functional Style
   * return statement returns from the method where it's called. break without a loop acts as a return.
