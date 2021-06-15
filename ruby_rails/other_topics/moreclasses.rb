@@ -17,9 +17,9 @@ class Item
   end
   
   def eql?(other_item)
-    compare_others(other_item)
-    # self.==(other_item) works as well
-    # ==(other_item) doesn't work
+    # ==(other_item)    # doesn't work
+    # compare_others(other_item)
+    # self.==(other_item)   # works as well
   end
   
   def hash

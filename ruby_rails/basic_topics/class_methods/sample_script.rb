@@ -35,6 +35,16 @@ class MailTruck
     p "You've called a missing method - #{method_name}"
     raise Exception.new("Non-Existing Method")
   end
+
+  def override_one(value)
+    @driver = "Name One #{value}"
+    p "Parent Class Override One: #{@driver}"
+  end
+
+  def override_two=(value)
+    @driver = value
+    p "Parent Class Override Two: #{@driver}"
+  end
 end
 
 class MailTruck
@@ -47,6 +57,35 @@ end
 
 class MailTruckKid < MailTruck
   undef print_route
+
+  def override_one(value)
+    @driver = "Name One #{value}"
+    p "Child Class Override One: #{@driver}"
+  end
+
+  def override_two=(value)
+    @driver = "Name Two #{value}"
+    p "Child Class Override Two: #{@driver}"
+  end
+
+  def call_overridden_methods_one(value)
+    override_one(value)     # no problems when no assignment operator
+    p "Called the first method"
+    self.override_one(value)
+    p "Called the second method"
+  end
+
+  def call_overridden_methods_two(value)
+    override_two=(value)    # this seems to be considered as an assignment
+    p "Called the first method"
+    override_two = value    # this is definitely considered as an assignment
+    p "Called the second method"
+    self.override_two=(value)
+    p "Called the third method"
+    self.override_two = value
+  end
+
+  
 end
 
 module MailModule
@@ -94,4 +133,10 @@ puts ""
 # Encoding objects don't have these methods
 p Encoding.locale_charmap
 p Encoding.default_external
+puts ""
+
+# Overridden methods for non predefined methods
+obj_kid.call_overridden_methods_one("Some Guy One")
+puts ""
+obj_kid.call_overridden_methods_two("Some Guy Two")
 puts ""

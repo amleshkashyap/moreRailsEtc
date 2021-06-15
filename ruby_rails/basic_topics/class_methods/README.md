@@ -2,14 +2,19 @@
   * Not an object by default (like blocks), although can be converted into one with identical behavior.
   * undef (used to undefine methods) has an interesting use case - undefining a method in child class (which doesn't affect the parent class) - although it's not 
     common, rather redefine is used (like other OOP langs). Alternatively, can use undef\_method.
-  * alias new\_name original\_name => for giving a new name to a method. Recall include? and member? methods from Range class which do the same thing post 1.9
-    Using it for "naturalness" is pointless as it creates ambiguity. A good usecase is to redefine a method outside the class but use the contents of original 
+  * "alias new\_name original\_name" => for giving a new name to a method. Recall include? and member? methods from Range class which do the same thing post 1.9
+    Using it for "naturalness" is pointless as it creates ambiguity. A good usecase is to redefine a method outside the class but use the contents of original
     definition, thus the original method can be invoked inside the new definition via its alias.
   * Had been wondering how to do this - pass method arguments in arbitrary order using argument names - Ruby doesn't officially support this. An approximation is
     supported though, via passing a hash as argument and then accessing from that (but nothing unique about it). But then, instead of passing a hash like fun({}),
     Ruby supports fun() with keys of the hash laid out in the open (only if it's the last argument though) in any order (bare hash) thus almost reaching there.
-  * Method args don't need to be wrapped inside () - "fun(a) == fun a". Don't use this in above though, ie, "fun({:a=>1}) != fun {:a=>1}" throws a syntax error,
-    instead we have "fun({:a=>1}) == fun :a=>1".
+  * Method args don't need to be wrapped inside ().
+    ```Ruby
+      fun(a) == fun a
+      fun({:a=>1, :b=>2}) == fun(:b=>2, :a=>1)   # using bare hash for passing args in any order
+      fun({:a=>1, :b=>2}) != fun {:b=>2, :a=>1}  # throws a syntax error, ie, when using bare hash arguments
+      fun({:a=>1, :b=>2}) == fun :b=>2, :a=>1    # need to use this for bare hash args
+    ```
   * Methods have access only to their local variables - unlike blocks which can access even outside - thus methods can't help in creating closures (all below).
     - so anything which is present in the definition of an entity isn't said to have a "binding" relationship, eg, local vars of methods/blocks aren't bindings.
     - anything which outside the definition but a necessity in order for the entity to be useful is a "binding" relationship, eg, objects on which methods are called.
@@ -19,6 +24,11 @@
     - method object invokation follows invokation semantics (hence more like lambda) and statements like return/rescue/break, etc behave similar as a method.
     - method can be converted to a Proc when passing as an argument - also, define\_method accepts a block to be converted to a method - that block can in turn be
       another method or proc object.
+    ```Ruby
+      def func(a); p a; end
+      fun = Object.method(:func)
+      fun.call(a) == fun.(a) == fun[a]  # fun(a) throws an error though, method object isn't exactly same as a regular method
+    ```
   * UnboundMethod class is interesting, it objects are methods which aren't bounded but can be bounded.
     - They're like methods from Modules. Method doesn't have 'bind' instance method, and 'unbind' instance method is not "in place" (ie, it returns a new object).
     - It's unclear whether unbounded methods can be non-object (like methods are by default). They're an object from this class, which can be used to create objects
@@ -115,6 +125,13 @@
     - any arguments after the first are used as arguments to the iterator method. also, I will not remember all these syntaxes.
     - Apart from using them for applying Enumerable module functions, they can also be used to prevent bugs - eg, if passing an array as an argument, then
       converting it to Enumerator (eg, array.to\_enum) before passing will give an immutable object (thus no need for deep copy to prevent object changes).
+  * Summary - iterators and iteration is possible only upon a set of elements - specifically countable (but non-infinite) sets.
+    - Array, Hash, Range, etc are naturally sets of (finite) elements - so we can directly move across the set in well defined ways (eg, "each" method), and also,
+      manipulate the elements while moving (eg, map, inject, select). These methods to navigate across and manipulate the sets are in Enumerable module.
+    - Integer, String are not a natural set of elements, but some tweaks can convert them to sets, and then methods from the Enumerable module can be used on them.
+    - This tweaking is done via converting to Enumerator object - first element is the original object, second is the method to be applied on it to make it a set.
+    - so, 4.times = [0, 1, 2, 3], "hello".each\_char = ['h', 'e', 'l', 'l', 'o']. Enumerator is just a good feature to have - we can create these arrays without it,
+      sometimes, even more efficiently perhaps.
 
 # Towards Functional Style
   * return statement returns from the method where it's called. break without a loop acts as a return.
@@ -131,5 +148,21 @@
 # Functional Programming
   * Common functions - map, inject (inject is a reducer with an initial value to start the reduction with as the argument).
   * Modules - Functional
-  * What are the implications on performance?
-  * How difficult to read the code and how many people use such paradigms?
+  * What are the implications on performance? How difficult to read the code and how many people use such paradigms? Will return later
+
+# Class
+  * class is an expression referred to by a value which is a constant. it's value is the last expression in it's body - typically an instance method using def.
+    The value of the def statement is nil - however, following happened -
+    ```Ruby
+      obj = class Num
+        def method_name
+          p "Ok"
+        end
+      end
+      obj  # output - :method_name - in 2.7
+    ```
+  * initialize method is private, invoked after object creation (probably in the memory/symbol tables) using new().
+  * instance variables always belong to whatever object self refers to - so a class can have instance variables too (apart from class variables @@).
+  * assignment expression based setter methods should be used only via an object, eg, obj.x = 2 if there's a setter x=(value). doing it inside another instance method
+    would mean using self.x = 2 instead of x = 2. similar issue seen before while overriding the ==(val) method (probably it's like = = val hence the issue, there's
+    no real issue with calling overridden methods without self if the names don't have = in it).
