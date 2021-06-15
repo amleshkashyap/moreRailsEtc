@@ -98,7 +98,7 @@
     - Integer - upto, downto, times - take an init value, then call the "succ" method till the end value is reached, or some count is satisfied. eg, 3.times { block }
     - Float - ex, 0.step(Math::PI, 0.1) { block } goes from 0 till pi in steps of 0.1 (since no succ method defined for floats)
     - String - each\_char, each\_byte, each\_line -  eg, "hello".each\_char { block }
-    - Enumerator object is a tuple - first element is an object, second element is an iterator method - he couldn't mention this simple thing to ease our lives.
+    - Enumerator object is a tuple - first element is an object, second element is an iterator method.
     - notice each iterator method is followed by a block - if there's no block, then the iterator method simply returns an Enumerator object,
       ex, "hello".each\_char, [].each, 4.times, {}.each_with_index - we can call Enumerable module functions (eg, map/inject) on this
   * Enumerables - Array, Hash, Range, etc - primarily "each" iterator and related iterators in the Enumerable module, eg, each\_with\_index
