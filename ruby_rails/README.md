@@ -22,6 +22,17 @@
     variables (using @, but defining outside a method, like a class variable) - these have to be redefined in child classes so they can have a separate copy.
   * Method Overriding - a thing to note while calling an instance method from another is that we can just use the name of the method, but if we're calling an
     instance method which is overridden in the current class, then need to call it using self - this is only true when the method name contains '=' in it.
+  * Recommended for classes (most Ruby default classes have these) -
+    1. overriding certain operators (hopefully with a different name) - to make operations look natural but can have custom implementations
+    2. using ? for methods returning boolean
+    3. ! for methods changing a instance variables (ie, many vars, hence, mutating the object)
+    4. var=() for updating individual vars (use attr\_accessors)
+    5. having ordering - if variables can be arranged in ascending/descending order
+    6. mixing in the Enumerable and overriding "each" - if multiple variables which can be updated/fetched in bulk
+    7. explicit converters and display methods (eg, to\_i, to\_s kind) - for obvious reasons
+    8. equality checks - for comparing 2 objects as equal
+    9. initialize\_copy - for clone/dup methods to do a deep copy
+    10. empty/nil/blank etc kind of check
   * Must Read - blank/empty/nil/present - https://blog.appsignal.com/2018/09/11/differences-between-nil-empty-blank-and-present.html
   * Bug Reduction Suggestions By The Book
     - use to\_enum to convert Arrays to Enumerators - makes them immutable, no need for deep copies, etc.

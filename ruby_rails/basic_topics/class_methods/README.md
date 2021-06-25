@@ -165,9 +165,17 @@
   * instance variables always belong to whatever object self refers to - so a class can have instance variables too (apart from class variables @@).
   * setter methods with assignment expressions should be used only via an object, eg, obj.x = 2 if there's a setter x=(value). doing it inside another instance method
     would mean using self.x = 2 instead of x = 2. similar issue seen before while overriding the ==(val) method (probably it's like = = val hence the issue)
-  * operator overloading in classes - for an object obj, if there's a "def \*(num)" instance method, then obj * 2 works, but 2 * obj calls the "\*" method of Integer
-    (assume num is an integer). Probably similar for other operators. As seen earlier with adding Rational and Fixnum, coerce can be utlized - override coerce to
-    switch the order, so that 2 * obj is computer as obj * 2, eg, def coerce(other); [self, other]; end;
+
+### Operator, etc Overloading
+  * For an object obj, if there's a "def \*(num)" instance method, then obj * 2 works, but 2 * obj calls the "\*" method of Integer (assume num is an integer).
+    Probably similar for other operators. As seen earlier with adding Rational and Fixnum, coerce can be utlized - override coerce to switch the order, so that
+    2 * obj is computer as obj * 2, eg,
+    ```Ruby
+      # coerce is an important method used by Ruby internally?
+      def coerce(other)
+        [self, other]
+      end
+    ```
   * Depending on the instance variables an object can have, some common operators/methods can be overridden to simplify programming - eg, assuming a class has 10
     instance variables, then override [] for allowing vars to be accessed as array elements, override each to make it Enumerable, etc. This would be more useful
     if all the variables of the object need to be updated after some changes (more suitable if all vars are updated according to some formula and bitmask maybe).
@@ -207,21 +215,58 @@
         code
       end
     ```
-  * Memory in Ruby, Multithreading, Thread safety, Background jobs -
-    - https://gettalong.org/blog/2017/memory-conscious-programming-in-ruby.html
-    - https://www.sitepoint.com/ruby-uses-memory/
-    - When multithreading in Ruby, be careful while modifying an object via different threads - instance/class variables aren't thread safe - this is of relevance
-      when threads are invoked from within the code (and hence, can potentially operate on same object)
-    - Software concurrency is a difficult thing, unlike hardware concurrency, which is well defined - eg, for a small supercomputer, it looks like this -
-      system -> level-1 -> level-2 -> ... -> fast-group-1 (set of cpu/gpu, eg, blade/rack/node) -> chip (eg, multicore cpu/gpu) -> 1/many threads
-    - In sidekiq, organization per sidekiq process is - (queues, workers) -> jobs -> actual code with loops - can utilize threading at any place. now the basic unit
-      of work in sidekiq is job, ie, a queue can have 10s of workers, with each workers having 10s of jobs (or, a worker having 10s of queues), but finally, sidekiq
-      actually does the computation at job level - thus concurrency works there. One can complicate things by spawning threads within jobs (they're Ruby threads) -
-      and then, have a great time debugging, if not done carefully.
-    - https://blog.appsignal.com/2019/10/29/sidekiq-optimization-and-monitoring.html, https://dzone.com/articles/thread-safe-apis-and-sidekiq
-    - Sidekiq thread safety - https://github.com/mperham/sidekiq/wiki/Problems-and-Troubleshooting#threading
-    - Now since sidekiq threads are operating on jobs, what is thread safety? Rails is running constantly, and a sidekiq process is separately running, and then
-      something is sent to sidekiq for execution - still, how likely it is that multiple threads of sidekiq access same class/instance variables?
-    - Will return on this topic - multiple scenarios.
+  * More things recommended for overriding - OOPS doesn't seem very relevant for writing code where objects don't have long lifetime in programs - if they're to be
+    stored into and fetched from DB, then having so many concepts and things are probably irrelevant - redis + DB + some simple language to connect things may be
+    better. Imagine something like molecular dynamics or climate simulation where objects have to live for long durations, or even some games which last longer -
+    OOPS, in its full complexity, might be much better suited there - but definitely OOP is more maintainable and looks organized/readable and hence, in reality,
+    probably why its used and is so widespread. With that said, <=> can be also overridden to define ordering in a class.
+  * Struct in Ruby - it can be used to create new classes quickly.
+    ```Ruby
+      Struct.new("SomeClass", :a, :b, :c)  # SomeClass is a new class Struct::SomeClass with 3 instance variables a,b,c
+      Struct::SomeClass.class.to_s         # Class
+      NewClass = Struct.new(:a, :b, :c)    # an unnamed class with 3 instance variables is created and assigned to a constant NewClass
+      NewClass.class.to_s                  # Class - the constant NewClass is the name of the unnamed class created above
+      BlankClass = Class.new               # a blank class - Class.new is a new class with no name, and assigned to a constant BlankClass
+      BlankClass.class.to_s                # Class - BlankClass has now become the name of the unnamed class above
+      obj = BlankClass.new                 # new object of the BlankClass
+      obj.class.to_s                       # "BlankClass" - obj is an object of BlankClass (which was just a constant earlier)
+    ```
+    - Provides [] and []= operators. also provides each, each\_pair iterators, override == and define a to\_s.
+    - Can open the class again and redefine new methods if required - Struct is a good quick way to have new classes.
+  * Good syntax for a new class, with isolation among various entities
+    ```Ruby
+      class Something
+        @@b  # class variable, shared with the child classes, can be used inside instance methods
+        def initialize
+          @x, @y = 2, 3  # instance variables
+        end
 
-  * 
+        SomeConstant = "xyz"  # useful constants
+
+        # instance methods
+        def some_meth
+        end
+
+        def some_new_meth
+        end
+
+        # use this section to define the set of class methods, instead of doing def Something.some_class_meth or self.some_class_meth - cleaner
+        class << self
+          # class instance variable, not shared with the child classes, can't be used inside instance methods (they're variables of the Class object itself)
+          # can also use attr_accessor :var, :nvar
+          @var, @nvar = 2, 3
+          # class methods
+          def some_class_meth
+          end
+
+          def some_new_class_meth
+          end
+        end
+      end
+    ```
+  * Define constants in a class above the initialize method (if the constants use instance variables). Define them from outside the class too, eg, Class::Constant = 3.
+
+
+### More
+  * instance/class variables aren't thread safe - this would mean an object is supposed to be handled by one thread (since objects can't be ignored) and class
+    variables are to be ignored - this is for multithreading in Ruby - while deployment, Phusion Passenger works via processes.

@@ -38,3 +38,21 @@
   * Termination - (a) some statement is encountered which leads to termination, (b) reaches the end of file - most frequent cases. (c) reads a line with the token
     \_\_END\_\_.. Unless explicitly terminated via exit! method, the program will (a) execute code blocks related to the END statements, (b) execute code blocks
     registered with the at\_exit method (a shutdown hook).
+
+  * Memory in Ruby, Multithreading, Thread safety, Background jobs, Web Servers, Packages Used -
+    - https://gettalong.org/blog/2017/memory-conscious-programming-in-ruby.html
+    - https://www.sitepoint.com/ruby-uses-memory/
+    - When multithreading in Ruby, be careful while modifying an object via different threads - instance/class variables aren't thread safe - this is of relevance
+      when threads are invoked from within the code (and hence, can potentially operate on same object)
+    - Software concurrency is a difficult thing, unlike hardware concurrency, which is well defined - eg, for a small supercomputer, it looks like this -
+      system -> level-1 -> level-2 -> ... -> fast-group-1 (set of cpu/gpu, eg, blade/rack/node) -> chip (eg, multicore cpu/gpu) -> 1/many threads
+    - In sidekiq, organization per sidekiq process is - (queues, workers) -> jobs -> actual code with loops - can utilize threading at any place. now the basic unit
+      of work in sidekiq is job, ie, a queue can have 10s of workers, with each workers having 10s of jobs (or, a worker having 10s of queues), but finally, sidekiq
+      actually does the computation at job level - thus concurrency works there. One can complicate things by spawning threads within jobs (they're Ruby threads) -
+      and then, have a great time debugging, if not done carefully. Concurrency in kue.js (not sure of bull.js) works similarly
+      (https://github.com/Automattic/kue#processing-concurrency) - although clusters are supposed to work like MPI (ie, core-level).
+    - https://blog.appsignal.com/2019/10/29/sidekiq-optimization-and-monitoring.html, https://dzone.com/articles/thread-safe-apis-and-sidekiq
+    - Sidekiq thread safety - https://github.com/mperham/sidekiq/wiki/Problems-and-Troubleshooting#threading
+    - Now since sidekiq threads are operating on jobs, what is thread safety? Rails is running constantly, and a sidekiq process is separately running, and then
+      something is sent to sidekiq for execution - still, how likely it is that multiple threads of sidekiq access same class/instance variables?
+    - Will return on this topic - multiple scenarios.
