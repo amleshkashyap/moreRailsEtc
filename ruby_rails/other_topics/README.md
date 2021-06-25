@@ -10,7 +10,7 @@
     another way, keywords serve as '{' or '}' in case of multiline Ruby code.
   * Never put a space between method name and opening paranthesis
 
-### Notes On Encoding - Mostly Irrelevant -
+### Notes On Encoding - Mostly Irrelevant
   * Obviously by default Ruby uses ASCII. And supports other encodings too. In fact, define your own encoding or whatever, just map it to ASCII and tell Ruby how to
     read it (how to tell?)
   * Source Encoding - this means the encoding used to read a particular Ruby script by the interpreter.
@@ -28,7 +28,7 @@
     2. Can be specified via "-E"/"--encoding" options now. Only 1 per process though.
     3. Encoding.default\_external and Encoding.locale\_charmap (from the locale) - these are methods of the metaclass of Encoding class.
 
-### Program Execution -
+### Program Execution
   * Start Of Execution - Interpreter first looks for BEGIN statement, if found, executes related code block, and then returns back to line-1 to continue further
     execution. No main method.
   * Module, Class, Method definitions - In compiled languages, these are obviously special keywords processed by compiler to do various things studied in Compiler
@@ -39,20 +39,42 @@
     \_\_END\_\_.. Unless explicitly terminated via exit! method, the program will (a) execute code blocks related to the END statements, (b) execute code blocks
     registered with the at\_exit method (a shutdown hook).
 
-  * Memory in Ruby, Multithreading, Thread safety, Background jobs, Web Servers, Packages Used -
+
+### What Is Different About Ruby?
+  * Purely Object Oriented Languages
+    - everything is an object in such languages
+    - basic datatypes are not present - so there's no direct mapping to memory to think about, for ex, Booleans are 1-byte in C, so are chars etc, but in a pure
+      object oriented language, Booleans have to be objects, and thus, they need to have some instance methods on them. Thus the concept of TrueClass, FalseClass and
+      NilClass - and their objects true, false and nil have some methods defined for them. We don't have to think about memory if we don't want to.
+    - These languages are written in something like C (Python, Ruby), and uses Structs (see metaprogramming) to handle classes (and thus, "datatypes").
+    - Structs in C are composed of multiple simpler datatypes and pointers, thus, consume more memory.
+  * C++ is mostly object oriented, similar to Java, but not pure OO.
+  * Inbuilt pubsub mechanism in standard lib - https://ruby-doc.org/stdlib-2.6.3/libdoc/observer/rdoc/Observable.html
+
+### Ruby Memory
+  * true, false, nil and Fixnum integers are objects which are not represented using Structs, their value can be operated directly from memory - they're fast.
+  * ObjectSpace module provides methods to interact with the garbage collection facility, and allows traversal of living objects. ObjectSpace from standard library
+    is a more interesting module - it extends the core ObjectSpace.
+  * memsize\_of and memsize\_of(class) method of this module can be utilized to see the memory usage. ex, ObjectSpace.memsize\_of({}) gives 40 bytes.
     - https://gettalong.org/blog/2017/memory-conscious-programming-in-ruby.html
     - https://www.sitepoint.com/ruby-uses-memory/
-    - When multithreading in Ruby, be careful while modifying an object via different threads - instance/class variables aren't thread safe - this is of relevance
-      when threads are invoked from within the code (and hence, can potentially operate on same object)
-    - Software concurrency is a difficult thing, unlike hardware concurrency, which is well defined - eg, for a small supercomputer, it looks like this -
-      system -> level-1 -> level-2 -> ... -> fast-group-1 (set of cpu/gpu, eg, blade/rack/node) -> chip (eg, multicore cpu/gpu) -> 1/many threads
-    - In sidekiq, organization per sidekiq process is - (queues, workers) -> jobs -> actual code with loops - can utilize threading at any place. now the basic unit
-      of work in sidekiq is job, ie, a queue can have 10s of workers, with each workers having 10s of jobs (or, a worker having 10s of queues), but finally, sidekiq
-      actually does the computation at job level - thus concurrency works there. One can complicate things by spawning threads within jobs (they're Ruby threads) -
-      and then, have a great time debugging, if not done carefully. Concurrency in kue.js (not sure of bull.js) works similarly
-      (https://github.com/Automattic/kue#processing-concurrency) - although clusters are supposed to work like MPI (ie, core-level).
-    - https://blog.appsignal.com/2019/10/29/sidekiq-optimization-and-monitoring.html, https://dzone.com/articles/thread-safe-apis-and-sidekiq
-    - Sidekiq thread safety - https://github.com/mperham/sidekiq/wiki/Problems-and-Troubleshooting#threading
-    - Now since sidekiq threads are operating on jobs, what is thread safety? Rails is running constantly, and a sidekiq process is separately running, and then
-      something is sent to sidekiq for execution - still, how likely it is that multiple threads of sidekiq access same class/instance variables?
-    - Will return on this topic - multiple scenarios.
+
+### Ruby Parallelism
+  * When multithreading in Ruby, be careful while modifying an object via different threads - instance/class variables aren't thread safe - this is of relevance when
+    threads are invoked from within the code (and hence, can potentially operate on same object).
+  * Ruby multithreading seems like pthreads - create new thread and join it back - probably languages don't do OpenMP kind of thing that much.
+  * Ruby multiprocessing - one can fork off a completely new process from within Ruby.
+
+### Concurrency In Web Apps
+  * Software concurrency is a difficult thing, unlike hardware concurrency, which is well defined - eg, for a small supercomputer, it looks like this -
+    system -> level-1 -> level-2 -> ... -> fast-group-1 (set of cpu/gpu, eg, blade/rack/node) -> chip (eg, multicore cpu/gpu) -> 1/many threads
+  * In sidekiq, organization per sidekiq process is - (queues, workers) -> jobs -> actual code with loops - can utilize threading at any place. now the basic unit
+    of work in sidekiq is job, ie, a queue can have 10s of workers, with each workers having 10s of jobs (or, a worker having 10s of queues), but finally, sidekiq
+    actually does the computation at job level - thus concurrency works there. One can complicate things by spawning threads within jobs (they're Ruby threads) -
+    and then, have a great time debugging, if not done carefully. Concurrency in kue.js (not sure of bull.js) works similarly - cluster are like MPI (core-level).
+    - https://github.com/Automattic/kue#processing-concurrency
+    - https://blog.appsignal.com/2019/10/29/sidekiq-optimization-and-monitoring.html
+    - https://dzone.com/articles/thread-safe-apis-and-sidekiq
+    - https://github.com/mperham/sidekiq/wiki/Problems-and-Troubleshooting#threading
+  * Now since sidekiq threads are operating on jobs, what is thread safety? Rails is running constantly, and a sidekiq process is separately running, and then
+    something is sent to sidekiq for execution - still, how likely it is that multiple threads of sidekiq access same class/instance variables?
