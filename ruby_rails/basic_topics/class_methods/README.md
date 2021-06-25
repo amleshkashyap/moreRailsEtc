@@ -1,4 +1,4 @@
-## Methods
+### Methods
   * Not an object by default (like blocks), although can be converted into one with identical behavior.
   * undef (used to undefine methods) has an interesting use case - undefining a method in child class (which doesn't affect the parent class) - although it's not 
     common, rather redefine is used (like other OOP langs). Alternatively, can use undef\_method.
@@ -41,7 +41,7 @@
       plus_again = plus_two.unbind  # plus_again is unbounded, plus_two remains bounded
     ```
 
-## Blocks
+### Blocks
   * Not an object by default but can be converted into one - multiple options available with varying properties (lambda and proc).
   * Pass block of code to methods (after the list of arguments) and then invoke the computation in the block - 
     - using yield (nothing to be mentioned about the block in the method's formal parameters)
@@ -102,7 +102,7 @@
   * binding method on Proc object returns a Binding object with description for those closures (ie, Proc objects). Binding object can be passed as second argument
     to eval method to provide context for evaluating the String using eval. Binding also seems to be the a general mechanism of storing information for methods.
 
-## Iterators
+### Iterators
   * eg, times, each, map, upto - these are followed by a block. if each is defined for the object, then a for loop can be used to loop on the object.
   * Basic iterator methods (meaning which iterate on the object based on defined ways and process the given block based on the iterations) -
     - Integer - upto, downto, times - take an init value, then call the "succ" method till the end value is reached, or some count is satisfied. eg, 3.times { block }
@@ -133,7 +133,7 @@
     - so, 4.times = [0, 1, 2, 3], "hello".each\_char = ['h', 'e', 'l', 'l', 'o']. Enumerator is just a good feature to have - we can create these arrays without it,
       sometimes, even more efficiently perhaps.
 
-## Towards Functional Style
+### Towards Functional Style
   * return statement returns from the method where it's called. break without a loop acts as a return.
   * return in a proc takes it outside the method obviously in normal cases. if a meth1 asks meth2 to create a proc from a block and return it so that it can "call" it,
     and that block has a return statement, then after meth1 calls the proc, a jump error is thrown after executing the block, because, supposedly, there are two
@@ -145,12 +145,12 @@
     semantics. procs have more flexibility, ie, the assignments are similar to parallel assignment rules (ie, multiple lvalue/rvalue scenarios etc). Bunch of rules.
     procs - yield semantics, lambdas - invocation semantics
 
-## Functional Programming
+### Functional Programming
   * Common functions - map, inject (inject is a reducer with an initial value to start the reduction with as the argument).
   * Modules - Functional
   * What are the implications on performance? How difficult to read the code and how many people use such paradigms? Will return later
 
-## Class
+### Class
   * class is an expression referred to by a value which is a constant. it's value is the last expression in it's body - typically an instance method using def.
     The value of the def statement is nil - however, following happened -
     ```Ruby

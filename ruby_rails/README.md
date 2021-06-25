@@ -1,4 +1,4 @@
-# Ruby Object Model
+### Ruby Object Model
   * Primary Sources - http://rubymonk.com, https://hokstad.com/ruby-object-model
   * BasicObject => Object, Kernel => Module => Class
   * Class::BasicObject (parent none) - instance\_eval, method\_missing, equal?
@@ -13,7 +13,7 @@
     original object. "freeze" can be used to make an object immutable and "frozen?" tells whether an object is mutable or not.
   * singleton\_method and singleton\_class - 
 
-# Summary
+### Summary
   * Primary Source - http://rubymonk.com
   * Enumerable class - important for performing operations on collection of elements (without reinventing the wheel, in an optimized, natively supported form) - eg,
     map for 1-1 transformation for each element of the set, inject for reduce operation on a set, select for picking up elements of a set based on criterias, etc.
