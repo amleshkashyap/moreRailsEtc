@@ -22,6 +22,7 @@
     variables (using @, but defining outside a method, like a class variable) - these have to be redefined in child classes so they can have a separate copy.
   * Method Overriding - a thing to note while calling an instance method from another is that we can just use the name of the method, but if we're calling an
     instance method which is overridden in the current class, then need to call it using self - this is only true when the method name contains '=' in it.
+  * Must Read - blank/empty/nil/present - https://blog.appsignal.com/2018/09/11/differences-between-nil-empty-blank-and-present.html
   * Bug Reduction Suggestions By The Book
     - use to\_enum to convert Arrays to Enumerators - makes them immutable, no need for deep copies, etc.
   * Performance Suggestions By The Book

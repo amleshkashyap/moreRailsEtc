@@ -1,6 +1,6 @@
 class MailTruck
   # can directly read/write to the instance variables using attr_accessor
-  attr_accessor :driver, :route
+  attr_accessor :driver, :route, :abcd
 
   def initialize( driver, route )
     @driver, @route = driver, route
@@ -37,7 +37,7 @@ class MailTruck
   end
 
   def override_one(value)
-    @driver = "Name One #{value}"
+    @driver = value
     p "Parent Class Override One: #{@driver}"
   end
 
@@ -59,12 +59,12 @@ class MailTruckKid < MailTruck
   undef print_route
 
   def override_one(value)
-    @driver = "Name One #{value}"
+    @driver = value
     p "Child Class Override One: #{@driver}"
   end
 
   def override_two=(value)
-    @driver = "Name Two #{value}"
+    @driver = value
     p "Child Class Override Two: #{@driver}"
   end
 
@@ -85,7 +85,23 @@ class MailTruckKid < MailTruck
     self.override_two = value
   end
 
-  
+  def driver_n
+#    "#{self.driver} name"
+    MailTruck.new("random", "random")
+  end
+
+  def some_method(value)
+    self.abcd = self.driver_n, value # by laws of parallel assignment, creates an array
+#    p self.abcd
+  end
+
+  def some_method_access
+    self.abcd(self.driver_n)
+  end
+
+  def find_method
+    p method(:some_method_access)
+  end
 end
 
 module MailModule
@@ -139,4 +155,54 @@ puts ""
 obj_kid.call_overridden_methods_one("Some Guy One")
 puts ""
 obj_kid.call_overridden_methods_two("Some Guy Two")
+puts ""
+
+p obj_kid.some_method("val")
+p obj_kid.driver_n
+p obj_kid.abcd
+# p obj_kid.some_method_access
+puts ""
+
+
+# utilizing similar methods across classes - blank/present are part of Rails, not Ruby
+p "Array empty, nil, length, size: #{Array.new.empty?}, #{Array.new.nil?}, #{Array.new.length}, #{Array.new.size}"
+p "String empty, nil, length, size: #{String.new("").empty?}, #{String.new("").nil?}, #{String.new("").length}, #{String.new("").size}"
+p "Hash empty, nil, length, size: #{Hash.new.empty?}, #{Hash.new.nil?}, #{Hash.new.length} #{Hash.new.size}"
+p "Boolean nil: #{false.nil?}"
+p "Numeric nil: #{Numeric.new.nil?}"
+p "Regex nil: #{Regexp.new(//).nil?}"
+puts ""
+
+# what exactly is happening? checking substring?
+str_v = "^abcdefgh"
+p "yes" if str_v["efg"]
+p "yes" if str_v["eg"]
+a = 5 if str_v == 'a'
+p "#{a.nil?}, #{a}, #{nil}" # a doesn't exist yet, still no error
+puts ""
+
+# Hash has an initialize_copy method defined already
+hash_a = {:a => 4, :b => 5}
+hash_b = hash_a.clone
+hash_c = hash_a.dup
+hash_d = hash_a
+p "Hash a: #{hash_a}"
+p "Hash b: #{hash_b}"
+p "Hash c: #{hash_c}"
+p "Hash d: #{hash_d}"
+hash_a.delete(:a)
+hash_a.delete(:b)
+p "Hash a: #{hash_a}"
+p "Hash b: #{hash_b}"
+p "Hash c: #{hash_c}"
+p "Hash d: #{hash_d}"
+puts ""
+
+# << is an in-place operator, + isn't
+Const, ConstCopy = ["a", "b"], ["a", "b"]
+Const1 = [ Const << 'c' ]
+p "Check if adding via << to a constant: original value - #{ConstCopy}, new array #{Const1}, new value of original const #{Const}"
+ConstCopy1 = Const.clone
+Const2 = [ Const + ['d'] ]
+p "Check if adding via + to a contant: original value - #{ConstCopy1}, new array #{Const2}, new value of original const #{Const}"
 puts ""

@@ -1,4 +1,4 @@
-# Methods
+## Methods
   * Not an object by default (like blocks), although can be converted into one with identical behavior.
   * undef (used to undefine methods) has an interesting use case - undefining a method in child class (which doesn't affect the parent class) - although it's not 
     common, rather redefine is used (like other OOP langs). Alternatively, can use undef\_method.
@@ -41,7 +41,7 @@
       plus_again = plus_two.unbind  # plus_again is unbounded, plus_two remains bounded
     ```
 
-# Blocks
+## Blocks
   * Not an object by default but can be converted into one - multiple options available with varying properties (lambda and proc).
   * Pass block of code to methods (after the list of arguments) and then invoke the computation in the block - 
     - using yield (nothing to be mentioned about the block in the method's formal parameters)
@@ -61,7 +61,7 @@
     iterators). Other use cases too.
   * "\*" is used before a formal parameter to represent an array of params, while it can be used before an actual param to indicate an array to be unpacked.
 
-# proc and lambda -
+## proc and lambda -
   * Class "Proc" has objects of type - lambda, proc. lambda is like a method/function, proc is like a block. "lambda?" method to differentiate Proc objects.
   * One way to create a proc is via using '&block' argument and passing a block at invocation.
   * (a) Proc.new \<block\>, or just, (Kernel.)proc \<block\> (for proc), (b).(i) (Kernel.)lambda \<block\> (for lambda), (ii) lambda {|x| p x} == ->(x){ p x }, 
@@ -71,7 +71,7 @@
   * There's a concept of arity, ie, number of arguments to the block, which get confusing when arguments can variable (ie, uses \*). Ignoring.
   * Two Proc objects will return true for equality test when created using clone/dup methods - write a parser to identify equivalent blocks in a large codebase?
 
-# Closures - 
+## Closures - 
   * lambdas/procs can be defined inside a method using blocks, and these blocks can use the local vars/args of the method.
   * These Proc objects can then be created outside the method using specific argument "values" to the method (ie, the method would return lambdas/procs specifically
     created using those "values"). Now these procs/lambdas must be able to retain those "values" if they're to be of any use, ie, when they're invoked after creation.
@@ -102,7 +102,7 @@
   * binding method on Proc object returns a Binding object with description for those closures (ie, Proc objects). Binding object can be passed as second argument
     to eval method to provide context for evaluating the String using eval. Binding also seems to be the a general mechanism of storing information for methods.
 
-# Iterators
+## Iterators
   * eg, times, each, map, upto - these are followed by a block. if each is defined for the object, then a for loop can be used to loop on the object.
   * Basic iterator methods (meaning which iterate on the object based on defined ways and process the given block based on the iterations) -
     - Integer - upto, downto, times - take an init value, then call the "succ" method till the end value is reached, or some count is satisfied. eg, 3.times { block }
@@ -133,7 +133,7 @@
     - so, 4.times = [0, 1, 2, 3], "hello".each\_char = ['h', 'e', 'l', 'l', 'o']. Enumerator is just a good feature to have - we can create these arrays without it,
       sometimes, even more efficiently perhaps.
 
-# Towards Functional Style
+## Towards Functional Style
   * return statement returns from the method where it's called. break without a loop acts as a return.
   * return in a proc takes it outside the method obviously in normal cases. if a meth1 asks meth2 to create a proc from a block and return it so that it can "call" it,
     and that block has a return statement, then after meth1 calls the proc, a jump error is thrown after executing the block, because, supposedly, there are two
@@ -145,12 +145,12 @@
     semantics. procs have more flexibility, ie, the assignments are similar to parallel assignment rules (ie, multiple lvalue/rvalue scenarios etc). Bunch of rules.
     procs - yield semantics, lambdas - invocation semantics
 
-# Functional Programming
+## Functional Programming
   * Common functions - map, inject (inject is a reducer with an initial value to start the reduction with as the argument).
   * Modules - Functional
   * What are the implications on performance? How difficult to read the code and how many people use such paradigms? Will return later
 
-# Class
+## Class
   * class is an expression referred to by a value which is a constant. it's value is the last expression in it's body - typically an instance method using def.
     The value of the def statement is nil - however, following happened -
     ```Ruby
@@ -163,6 +163,65 @@
     ```
   * initialize method is private, invoked after object creation (probably in the memory/symbol tables) using new().
   * instance variables always belong to whatever object self refers to - so a class can have instance variables too (apart from class variables @@).
-  * assignment expression based setter methods should be used only via an object, eg, obj.x = 2 if there's a setter x=(value). doing it inside another instance method
-    would mean using self.x = 2 instead of x = 2. similar issue seen before while overriding the ==(val) method (probably it's like = = val hence the issue, there's
-    no real issue with calling overridden methods without self if the names don't have = in it).
+  * setter methods with assignment expressions should be used only via an object, eg, obj.x = 2 if there's a setter x=(value). doing it inside another instance method
+    would mean using self.x = 2 instead of x = 2. similar issue seen before while overriding the ==(val) method (probably it's like = = val hence the issue)
+  * operator overloading in classes - for an object obj, if there's a "def \*(num)" instance method, then obj * 2 works, but 2 * obj calls the "\*" method of Integer
+    (assume num is an integer). Probably similar for other operators. As seen earlier with adding Rational and Fixnum, coerce can be utlized - override coerce to
+    switch the order, so that 2 * obj is computer as obj * 2, eg, def coerce(other); [self, other]; end;
+  * Depending on the instance variables an object can have, some common operators/methods can be overridden to simplify programming - eg, assuming a class has 10
+    instance variables, then override [] for allowing vars to be accessed as array elements, override each to make it Enumerable, etc. This would be more useful
+    if all the variables of the object need to be updated after some changes (more suitable if all vars are updated according to some formula and bitmask maybe).
+  * Doing the above has drawbacks in reality -
+    - It can be confusing for others who don't read everything, and even for the writer if they don't understand completely.
+    - Better way is to do these via named methods, eg, plus, is\_equal?, get\_index, etc - this forces readers to read the definition of the method instead of assuming
+      (like they would for +, -, *, etc).
+    - Overriding "each" seems inevitable if want to take benefits of Enumerable mixins.
+    - This overriding problem is true for quite a few predefined methods for common operation, especially if other languages use it in different ways than Ruby
+      (already seen for modulo and division operators) - strange that languages don't have standards for some must have operations.
+    - Have to be careful while overriding (and even using) these groups -
+      - ==, eql?, equal?, ===
+      - empty?, blank?, present?, nil?
+      - size, length
+    - It's recommended to use the same operators inside while overriding it - eg, use eql? if overriding it in a class and so on.
+  * Hash key problem again -
+    - as mentioned, use symbols (immutable) or strings (immutability handled by Ruby). If an instance variable of an object is used as a Hash
+      key, then retrieving it's value is possible only when same instance variable is passed (avoid these things) - unless we redefine eql? method in the class (because
+      Hash uses eql? method for key comparisons, not for value though) - so eql? method can be overridden so that 2 instance variables (ie, 2 separate memory locations)
+      can be used to retrieve the value from Hash if their values are same (again, avoid it and directly use the value as string/symbol), hash[@p] and hash[@q] should
+      return the same value when p == q (and eql? is overridden). When does one need to use an instance variable as a Hash key?
+    - now if eql? is overridden, hash method has to be overriden obviously (for computing hashcode according to the new definitions in eql?)
+    - comparing object equality is a common operation - so ==/eql?/hash might need to be overridden. All of this suggest instance variables storage in memory is done
+      using hashes by Ruby - remember objects have a pointer to a structure for storing instance variables (Ruby done in C).
+    - finding a good hash is anyways a difficult problem, depending on the scenario. Following general purpose definition to be remembered
+    ```Ruby
+      # assume 10 instance variables a till j
+      # one hash function can be @a.hash + @b.hash + .. + @j.hash
+      # above is valid but leads to poor performance - probably due to higher number of possible collisions?
+      # below is recommended
+      def hash
+        code = 17
+        code = 37*code + @a.hash
+        code = 37*code + @b.hash
+        ...
+        code = 37*code + @j.hash
+        code
+      end
+    ```
+  * Memory in Ruby, Multithreading, Thread safety, Background jobs -
+    - https://gettalong.org/blog/2017/memory-conscious-programming-in-ruby.html
+    - https://www.sitepoint.com/ruby-uses-memory/
+    - When multithreading in Ruby, be careful while modifying an object via different threads - instance/class variables aren't thread safe - this is of relevance
+      when threads are invoked from within the code (and hence, can potentially operate on same object)
+    - Software concurrency is a difficult thing, unlike hardware concurrency, which is well defined - eg, for a small supercomputer, it looks like this -
+      system -> level-1 -> level-2 -> ... -> fast-group-1 (set of cpu/gpu, eg, blade/rack/node) -> chip (eg, multicore cpu/gpu) -> 1/many threads
+    - In sidekiq, organization per sidekiq process is - (queues, workers) -> jobs -> actual code with loops - can utilize threading at any place. now the basic unit
+      of work in sidekiq is job, ie, a queue can have 10s of workers, with each workers having 10s of jobs (or, a worker having 10s of queues), but finally, sidekiq
+      actually does the computation at job level - thus concurrency works there. One can complicate things by spawning threads within jobs (they're Ruby threads) -
+      and then, have a great time debugging, if not done carefully.
+    - https://blog.appsignal.com/2019/10/29/sidekiq-optimization-and-monitoring.html, https://dzone.com/articles/thread-safe-apis-and-sidekiq
+    - Sidekiq thread safety - https://github.com/mperham/sidekiq/wiki/Problems-and-Troubleshooting#threading
+    - Now since sidekiq threads are operating on jobs, what is thread safety? Rails is running constantly, and a sidekiq process is separately running, and then
+      something is sent to sidekiq for execution - still, how likely it is that multiple threads of sidekiq access same class/instance variables?
+    - Will return on this topic - multiple scenarios.
+
+  * 
