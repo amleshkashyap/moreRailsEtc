@@ -206,3 +206,6 @@ ConstCopy1 = Const.clone
 Const2 = [ Const + ['d'] ]
 p "Check if adding via + to a contant: original value - #{ConstCopy1}, new array #{Const2}, new value of original const #{Const}"
 puts ""
+
+pp = instance_eval("15 % 10")
+p pp

@@ -267,6 +267,37 @@
   * Define constants in a class above the initialize method (if the constants use instance variables). Define them from outside the class too, eg, Class::Constant = 3.
 
 
+### Inheritance
+  * A class that doesn't extend anything, extends Object.
+  * One class can have only one parent - so there's a tree like hierarchy - although multiple inheritance can be achieved via mixins.
+  * In Java/C++, contructor methods have same name as the class - so they're not inherited by default. here, initialize method is inherited too.
+  * Struct based classes can have children as well (anyways Struct.new gives a class).
+  * If a class has methods which invoke undefined methods, it's abstract (Ruby's Abstract classes) - subclasses can define these methods.
+  * Since private methods are also inherited, it can be dangerous, since those are prone to being overridden - but that's a generic problem.
+  * super - use this in subclass' instance method to invoke a method of the same name in the parent class (or any ancestor class). Better to explicitly pass
+    arguments, no arguments would send the current instance method's actual arguments (with modified values, if modified).
+  * Class methods are inherited too, can be overridden, and super can be used.
+  * Better to call class methods with the actual class name for which they're invoked, eg, Child.some\_meth shouldn't be used if class method some\_meth isn't
+    overridden in Child class, better use Parent.some\_meth. "new" method is an exception.
+  * Inheritance is to utilize the behavior of parents in child - ie, methods - instance variables are states of the actual objects of a class - let's say a class has
+    10 objects, then those 10 objects can follow similar processes (ie, methods) but on different initial states, represented by the instance variables. Thus, even
+    for objects of same class, only the processes/methods are same, instance variables aren't. With this argument, it doesn't make sense to talk about inheritance
+    of instance variables - subclasses will follow similar processes as their parent (with new/modified processes), and instance variables will be the initial states.
+  * Class instance variables aren't inherited - class methods are inherited by the child class' class object though.
+  * Since child/parent classes are an object of Class, it's difficult to digest that an object is inheriting behavior of another object.
+  * There's a concept of static variables of a class in Java, wherein there's just one copy of the variable no matter how many objects of the class exist. These
+    static variables are class variables - and by their very nature of being a single memory location, are also shared with the subclasses (and their objects). Same
+    goes for static methods and class methods, but it's more relevant to think of this in case of class variables since they're prone to bugs.
+  * Constants are also inherited, and can be redefined, like methods. Constants are anyways referrable as Parent::Constant and Child::Constant, so there's no
+    warning of redefinition. If this redefined constant has to be used in a method which is not overridden in the child class, then that method call will use
+    will work with the parent's constant, since constants are looked up in the lexical scope of where they're used - avoid these things.
+  * Using Modules and Multiple Inheritance -
+    - modules can be included in a class and the class thus has a new set of instance methods to be used only by the instances (not by Class itself).
+    - modules can be extended in a class and the class object (not the instance objects though) have new set of class methods.
+    - there is a complicated way to both include and extend the module to a class (via included method) - https://culttt.com/2015/07/08/working-with-mixins-in-ruby/
+    - so a class can therefore inherit its parents behavior, and then mixin a bunch of methods (behaviors) too, thus giving the multiple inheritance effect.
+    - class\_methods do is a shorthand provided by some gems to allow adding class methods via modules instead of doing all the above.
+
 ### More
   * instance/class variables aren't thread safe - this would mean an object is supposed to be handled by one thread (since objects can't be ignored) and class
     variables are to be ignored - this is for multithreading in Ruby - while deployment, Phusion Passenger works via processes.
