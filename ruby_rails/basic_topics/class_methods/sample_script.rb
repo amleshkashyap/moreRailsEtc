@@ -38,13 +38,34 @@ class MailTruck
 
   def override_one(value)
     @driver = value
-    p "Parent Class Override One: #{@driver}"
+    p "Parent Class Override One: #{@driver}, Constant: #{CONST_VAL}"
   end
 
   def override_two=(value)
     @driver = value
     p "Parent Class Override Two: #{@driver}"
   end
+
+  def call_overridden_methods(value)
+    override_one(value)
+    p "Called the first method"
+    self.override_one(value)
+    p "Called the second method"
+    override_two=(value)
+    p "Called the third method - equivalent to an assignment"
+    self.override_two=(value)
+    p "Called the fourth method"
+  end
+
+  def not_overridden
+    p "Constant is #{CONST_VAL}"
+  end
+
+  def constant_only
+    p "Constant in parent is: #{CONST_VAL}"
+  end
+
+  CONST_VAL = "SOMETHING_PARENT"
 end
 
 class MailTruck
@@ -60,8 +81,15 @@ class MailTruckKid < MailTruck
 
   def override_one(value)
     @driver = value
-    p "Child Class Override One: #{@driver}"
+    p "Child Class Override One: #{@driver}, Constant: #{CONST_VAL}"
   end
+
+  def constant_only
+    p "Constant in child is #{CONST_VAL}. Below line is using super."
+    super
+  end
+
+  CONST_VAL = "SOMETHING_CHILD"
 
   def override_two=(value)
     @driver = value
@@ -77,12 +105,13 @@ class MailTruckKid < MailTruck
 
   def call_overridden_methods_two(value)
     override_two=(value)    # this seems to be considered as an assignment
-    p "Called the first method"
+    p "Called the first method - equivalent to an assignment"
     override_two = value    # this is definitely considered as an assignment
-    p "Called the second method"
+    p "Called the second method - equivalent to an assignment"
     self.override_two=(value)
     p "Called the third method"
     self.override_two = value
+    p "Called the fourth method"
   end
 
   def driver_n
@@ -152,9 +181,29 @@ p Encoding.default_external
 puts ""
 
 # Overridden methods for non predefined methods
+puts "********** Calling a child method which uses overridden methods without '=' symbol via child object **************"
 obj_kid.call_overridden_methods_one("Some Guy One")
 puts ""
+puts "********** Calling a child method which uses overridden methods with '=' symbol via child object ***************"
 obj_kid.call_overridden_methods_two("Some Guy Two")
+puts ""
+puts "*********** Calling a parent method which uses overridden methods (with/without '=' symbol) via child object **************"
+obj_kid.call_overridden_methods("Some Guy By Child")
+puts ""
+puts "*********** Calling a parent method which uses overridden methods (with and without '=' symbols) via parent object *************"
+obj.call_overridden_methods("Some Guy By Parent")
+puts ""
+puts "*********** Calling a parent method which uses overridden constant via child object ***************"
+obj_kid.not_overridden
+puts ""
+puts "*********** Calling a parent method which uses overridden constant via parent object ***************"
+obj.not_overridden
+puts ""
+puts "*********** Calling an overridden method which uses overridden constant via child object ***************"
+obj_kid.constant_only
+puts ""
+puts "*********** Calling an overridden method which uses overridden constant via parent object ***************"
+obj.constant_only
 puts ""
 
 p obj_kid.some_method("val")
