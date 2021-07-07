@@ -220,6 +220,7 @@ p "Hash empty, nil, length, size: #{Hash.new.empty?}, #{Hash.new.nil?}, #{Hash.n
 p "Boolean nil: #{false.nil?}"
 p "Numeric nil: #{Numeric.new.nil?}"
 p "Regex nil: #{Regexp.new(//).nil?}"
+p "Nil nil: #{nil.nil?}"
 puts ""
 
 # what exactly is happening? checking substring?
@@ -256,5 +257,51 @@ Const2 = [ Const + ['d'] ]
 p "Check if adding via + to a contant: original value - #{ConstCopy1}, new array #{Const2}, new value of original const #{Const}"
 puts ""
 
-pp = instance_eval("15 % 10")
-p pp
+
+module FirstIN; end; module LastIN; end;
+module FirstLH; end; module LastLH; end; module ConfuseLH; end;
+module FirstRH; end; module LastRH; end; module ConfuseRH; end;
+module IN; include FirstIN; include LastIN; end;
+class RHS; include FirstRH; include ConfuseRH; include IN; include LastRH; end;
+{'class' => ["< RHS", ".new"], 'module' => ['', '']}.each do |key, rhs|
+  eval("#{key} LHS#{key.capitalize} #{rhs[0]}; include FirstLH; include ConfuseRH; include IN; include ConfuseLH; include LastLH; end;")
+
+  instance_obj = eval("LHS#{key.capitalize}#{rhs[1]}")
+  p "Printing for #{key} - class, superclass, ancestors"
+  p eval("LHS#{key.capitalize}.class")
+  p eval("if LHS#{key.capitalize}.respond_to?(:superclass); LHS#{key.capitalize}.superclass; else; 'No superclass method defined for LHS#{key.capitalize}'; end")
+  p eval("LHS#{key.capitalize}.ancestors")
+
+  p "Checking in ancestors of LHS#{key.capitalize}"
+  array = eval("LHS#{key.capitalize}.ancestors")
+  array.each do |anc|
+    p eval("LHS#{key.capitalize}.is_a?(anc)")
+  end
+
+  p "Checking in ancestors of #{key.capitalize} - subset of above"
+  array = eval("#{key.capitalize}.ancestors")
+  array.each do |anc|
+    p eval("LHS#{key.capitalize}.is_a?(anc)")
+  end
+
+  puts ""
+  p "Printing for instance_obj - class, superclass, ancestors"
+  p eval("if instance_obj.respond_to?(:class); instance_obj.class; else; 'No class method defined for instance_obj'; end")
+  p eval("if instance_obj.respond_to?(:superclass); instance_obj.superclass; else; 'No superclass method defined for instance_obj'; end")
+  p eval("if instance_obj.respond_to?(:ancestors); instance_obj.ancestors; else; 'No ancestors method defined for instance_obj'; end")
+
+  p "Checking instance_obj in ancestors of LHS#{key.capitalize}"
+  array = eval("LHS#{key.capitalize}.ancestors")
+  array.each do |anc|
+    p eval("instance_obj.is_a?(anc)")
+  end
+
+  p "Checking instance_obj in ancestors of #{key.capitalize}"
+  array = eval("#{key.capitalize}.ancestors")
+  array.each do |anc|
+    p eval("instance_obj.is_a?(anc)")
+  end
+
+  puts ""
+  puts ""
+end

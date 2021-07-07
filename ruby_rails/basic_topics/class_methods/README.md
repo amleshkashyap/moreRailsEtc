@@ -103,6 +103,7 @@
     to eval method to provide context for evaluating the String using eval. Binding also seems to be the a general mechanism of storing information for methods.
 
 ### Iterators
+  * Caution? can some methods can be parallel?
   * eg, times, each, map, upto - these are followed by a block. if each is defined for the object, then a for loop can be used to loop on the object.
   * Basic iterator methods (meaning which iterate on the object based on defined ways and process the given block based on the iterations) -
     - Integer - upto, downto, times - take an init value, then call the "succ" method till the end value is reached, or some count is satisfied. eg, 3.times { block }
@@ -297,6 +298,85 @@
     - there is a complicated way to both include and extend the module to a class (via included method) - https://culttt.com/2015/07/08/working-with-mixins-in-ruby/
     - so a class can therefore inherit its parents behavior, and then mixin a bunch of methods (behaviors) too, thus giving the multiple inheritance effect.
     - class\_methods do is a shorthand provided by some gems to allow adding class methods via modules instead of doing all the above.
+  * If a module is included in a class, then it's added to the ancestors of that class.
+    - ancestors and superclass methods aren't defined for instance objects, superclass method isn't defined for modules.
+    - There's a constant confusion between these methods - "class", "superclass", "ancestors", "is\_a?", "instance\_of?" - but it's easy to resolve wrt Ruby.
+    - Luckily, only 2 things can be created using keywords followed by some code, followed by end -
+      1. class - create an object which will return "Class" for "class" method - always
+      2. module - create an object which will return "Module" for "class" method, "Object" for "superclass" method - always
+    - Also, lambda creates an object which will return "Proc" for "class" method, "Object" for "superclass" method - no end required, just a block.
+    - Consider this - this clarifies the constant/method resolution algo too somewhat -
+    ```Ruby
+      module FirstIN; end; module LastIN; end;
+      module FirstLH; end; module LastLH; end; module ConfuseLH; end;
+      module FirstRH; end; module LastRH; end; module ConfuseRH; end;
+      module IN; include FirstIN; include LastIN; end;
+      class RHS; include FirstRH; include ConfuseRH; include IN; include LastRH; end;
+      {'class' => ["< RHS", ".new"], 'module' => ['', '']}.each do |key, rhs|
+        eval("#{key} LHS#{key.capitalize} #{rhs[0]}; include IN; end;")
+        instance_obj = eval("LHS#{key.capitalize}#{rhs[1]}")
+        p "Printing for #{key} - class, superclass, ancestors"
+        p eval("LHS#{key.capitalize}.class")
+        p eval("if LHS#{key.capitalize}.respond_to?(:superclass); LHS#{key.capitalize}.superclass; else; 'No superclass method defined for LHS#{key.capitalize}'; end")
+        p eval("LHS#{key.capitalize}.ancestors")
+        puts ""
+        p "Printing for instance_obj - class, superclass, ancestors"
+        p eval("if instance_obj.respond_to?(:class); instance_obj.class; else; 'No class method defined for instance_obj'; end")
+        p eval("if instance_obj.respond_to?(:superclass); instance_obj.superclass; else; 'No superclass method defined for instance_obj'; end")
+        p eval("if instance_obj.respond_to?(:ancestors); instance_obj.ancestors; else; 'No ancestors method defined for instance_obj'; end")
+        puts ""
+        puts ""
+      end
+
+      # prints this
+        # "Printing for class - class, superclass, ancestors"
+        # Class
+        # RHS
+        # [LHSClass, LastLH, ConfuseLH, FirstLH, RHS, LastRH, IN, LastIN, FirstIN, ConfuseRH, FirstRH, Object, Kernel, BasicObject]
+
+        # "Printing for instance_obj - class, superclass, ancestors"
+        # LHSClass
+        # "No superclass method defined for instance_obj"
+        # "No ancestors method defined for instance_obj"
+
+
+        # "Printing for module - class, superclass, ancestors"
+        # Module
+        # "No superclass method defined for LHSModule"
+        # [LHSClass, LastLH, ConfuseLH, IN, LastIN, FirstIN, ConfuseRH, FirstLH]
+
+        # "Printing for instance_obj - class, superclass, ancestors"
+        # Module
+        # "No superclass method defined for instance_obj"
+        # [LHSClass, LastLH, ConfuseLH, IN, LastIN, FirstIN, ConfuseRH, FirstLH]
+    ```
+    - instance\_of? is a straighforward method => obj.instance\_of?(X) method returns true only when X == obj.class. objects created using module and class keywords
+      are instance\_of? Module and Class respectively. Any instance object is an instance\_of? its class (even class/module does a Class.new/Module.new).
+    - is\_a? is a complicated method -
+      1. an object ModObj whose class is Module - is\_a? returns true for every element of Module.ancestors
+      2. an object ClObj whose class is Class, and superclass is SuperClass - is\_a? returns true for every element of Class.ancestors
+      3. an object InstObj whose class is ClObj (ie, from (2)) - is\_a? returns true for every element of ClObj.ancestors
+
+
+### Method Resolution
+  1. check for singleton methods of the object (ie, defined specifically for that instance, stored in the metaclass of the object). Also, if the metaclass of an object
+     has ancestors, then check there as well => metaclasses of normal objects don't have any ancestors, but metaclasses of Class object do have ancestors, eg,
+     "metaclass of Fixnum object" (not an instance object of Fixnum) has "metaclass of Integer object" as its ancestor (and other ancestors too).
+  2. check for instance methods in the object's class
+  3. check for methods in the modules included in object's class - check the last included module first
+  4. check for ancestor class' instance methods
+     - (3) and (4) can be given by ancestors method, if unique modules are included in the class and its parents.
+  5. if not found, check for method\_missing method, starting from (1) till (4) - it'll always be found in (4), ie, the Kernel module (ancestor's module).
+
+### Constant Resolution
+  * Say a constant is referred in class SomeClass which maybe be defined inside another class or module.
+  1. check for the constant definition in the results of Module.nesting method - it includes all classes/module lexically above SomeClass.
+     - all enclosing modules, if present, are checked, before checking included modules
+  2. check in the ancestors of SomeClass - ancestors methods is above
+  3. check in Object class (this means returning back to Object again after checking all ancestors) - all global constants are part of Object class.
+     - when a constant is referenced from a module, ancestors of the module are checked, followed by Object class (for global constants)
+     - since Kernel is after Object in ancestry, any constants in Kernel can be overridden by Object.
+  4. check if const\_missing method is defined in SomeClass
 
 ### More
   * instance/class variables aren't thread safe - this would mean an object is supposed to be handled by one thread (since objects can't be ignored) and class
