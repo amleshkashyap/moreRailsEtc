@@ -356,6 +356,82 @@
       1. an object ModObj whose class is Module - is\_a? returns true for every element of Module.ancestors
       2. an object ClObj whose class is Class, and superclass is SuperClass - is\_a? returns true for every element of Class.ancestors
       3. an object InstObj whose class is ClObj (ie, from (2)) - is\_a? returns true for every element of ClObj.ancestors
+      4. summary - for an object AnyObj, is_a? returns true for every element of AnyObj.class.ancestors
+
+### Modules
+  * Clearly, modules doesn't have the inheritance property (although it has ancestors) - no superclass method.
+  * Modules don't have a new method too, so an instance object is always an instance of an object whose class is Class (never Module).
+    - Module can have instance and class methods - it's instance methods are useless unless the module is included in some class.
+    - Its class methods are it's "own" methods - any instance of anything doesn't have access to it.
+  * In the hierarchy seen earlier, BasicObject, Object, Module, Class - since for these, class is Class, they're inherited, eg, Numeric, String, Hash, SomeClass, but
+    Kernel, Enumerable, etc aren't.
+  * The class "Class" is a child of "Module", so it has all the properties of Module - eg, nesting.
+  * Modules can have constants, methods and class variables too.
+  * Module namespacing is good for some global methods, classes can be namespaced too.
+  * Mixins - Module Mod can be included and extended in another class SomeClass.
+    - When included, Mod's instance methods act as SomeClass' instance methods.
+    - When extended, Mod's instance methods act as SomeClass' class methods.
+      * Worth noting that extending a module means adding methods of the modules into singleton methods of the receiver object, eg, the extending Class in this case.
+      * Would this mean that an instance object can also extend a module dynamically to provide itself with some singleton methods, if needed?
+    - When included and extended, Mod's instance methods act as SomeClass' instance and class methods.
+      * It is not possible to have separate class and instance methods for SomeClass when Mod is included and extended - all instance methods of Mod act as both.
+      * This can be done though - Mod needs to have a nested module NestMod - SomeClass should include Mod, and extend NestMod. included method simplifies it.
+    - When Mod is used as mixin, there should be a way to allow Mod to have its own private methods which need not be instance/class methods of SomeClass
+      * They're the class_methods of Mod, defined as self.some\_meth or Mod.some\_meth inside the module => these need to be always invoked as Mod.some\_meth.
+    - include is not a keyword - since method invocation need not have brackets for arguments. include Mod == include(Mod)
+    - Clearly, including modules effects the is\_a? method
+    - With all of this mixin, Module can effectively be seen as a class (if one removes the "own" methods) - and thus the multiple inheritance usecase.
+    - Instance methods of a module can be converted to its "own" methods by using a keyword module\_function - should be avoided.
+
+### Load
+  * Expects complete filename with extension to be loaded. Usually expects .rb type of files.
+  * Freshly loads whenever called - no caching.
+  * loads with whatever $SAFE variable value is used - relevance?
+  * Uses $LOAD\_PATH global variable value of Ruby for loading when absolute path not present - it returns and array of pre-saved paths for Ruby to load from.
+    - Search start from start of the array
+    - from 1.9, gems are the initial part of this array (with highest version of a particular gem being the default - modifiable though)
+    - these are followed by site specific libraries (??), OS libraries specific for Ruby, standard library and OS default libraries.
+    - use "--disable-gems" if program uses no gems - for some perf improvements - rare.
+    - can add further libraries with "-I" cmd option
+    - $LOAD\_PATH can be modified from within a Ruby program
+    - $LOAD\_PATH is ignored when absolute paths (starts with / or ~) are given to load/require.
+  * loaded files don't have access to the local scope of their place of invocation - global vars/constants which are defined before are available though.
+    - local variables of the loaded files are destroyed after execution is complete, obviously.
+    - the constants/globals defined/modified in the loaded file are however retained - so it can change the global state of the program.
+    - when the file is changed, and then we do a load again on that (in the same context though - eg, single irb session) - some warnings are thrown. these changes
+      should preferably be wrt the constants (classes/modules are also constants).
+    - load can't be used for nesting though, ie, open a class, load some methods from a file - doesn't work. new classes can be added to the global state though.
+    - there's no object passed to the loaded file, and thus the default object at start of loaded file is main.
+    - load(file) - can be considered similar to doing - eval File.read(file)
+  * When a non-nil/non-false 2nd argument is passed to load, it doesn't allow the file to change the global state of the program as before
+    - basically, constants defined/modified in the file aren't reflected in the global state of the program
+    - global variables can still be modified though
+    - it is achieved by "wrapping the file and loading it inside an anonymous module" - unlike before, any constants of the file aren't remembered.
+    - Sandbox env's don't use require, and loads are always wrapped - it's considered safe, and used infrequently.
+    - load(file, true) - can be considered similar to doing - Module.new.module\_eval(File.read(file))
+    - good article here - https://practicingruby.com/articles/ways-to-load-code
+  * Autoloading - lazy loading of files on a need basis. register uninitialized constants to be loaded from a specific file, when referenced.
+    - autoload :some\_class, "filename\_to\_load"
+    - uses require for loading rather than load
+    - autoload?/Module.autoload? with a symbol argument will give the filename that'll be loaded when the symbol is referenced (nil if not registered/loaded already).
+
+### Require
+  * Can work with just a name - if 2 files of same name but different extensions are present in the relevant directory searched first, .rb is given highest preference,
+    followed by relevant binary files of the OS (eg, .so/.dll).
+    - thus, can work both with ruby source code and binaries - preferred for binaries though.
+  * Caches the loaded files in global variable $LOADED\_FEATURES - since 1 file can be given by more than one, but not too many path strings, there's barely any
+    duplications/reloads.
+  * require is safer than load via some $SAFE variable related thing (for tainted objects).
+
+### Singleton Methods, Singleton/Eigen/Meta Class
+  * singleton is a class with only one instance - so a new Class object, ClObj = Class.new, is just one object - it can have a singleton/meta class.
+    - ClObj can have many instance objects - each of those have a singleton/meta class.
+    - class methods of ClObj are stored in its metaclass, say, ClObjMeta
+    - new class methods can be dynamically added to ClObjMeta
+    - instance object of ClObj, say cl\_instance, are stored in its metaclass, say ClInstanceMeta.
+    - new class methods can be added to ClInstanceMeta too.
+    - If ClObj inherits from ClParentObj with a metaclass ClParentObjMeta, then ClParentObjMeta is the parent of ClObjMeta - this is why class methods are inherited.
+    - ClInstanceMeta has no parent.
 
 
 ### Method Resolution
@@ -381,3 +457,4 @@
 ### More
   * instance/class variables aren't thread safe - this would mean an object is supposed to be handled by one thread (since objects can't be ignored) and class
     variables are to be ignored - this is for multithreading in Ruby - while deployment, Phusion Passenger works via processes.
+  * Memory locations being modified are almost always unsafe for anything global - with DB in picture, many processes can be trying to write.

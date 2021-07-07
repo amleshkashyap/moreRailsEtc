@@ -258,11 +258,53 @@ p "Check if adding via + to a contant: original value - #{ConstCopy1}, new array
 puts ""
 
 
-module FirstIN; end; module LastIN; end;
-module FirstLH; end; module LastLH; end; module ConfuseLH; end;
-module FirstRH; end; module LastRH; end; module ConfuseRH; end;
-module IN; include FirstIN; include LastIN; end;
-class RHS; include FirstRH; include ConfuseRH; include IN; include LastRH; end;
+module FirstIN
+#  This is same as doing extend FirstIN::ClassMethods in the class definition
+#  def self.included(base)
+#    base.extend(ClassMethods)
+#  end
+
+  def FirstIN.first_own_method(x, y)
+    p "FirstIN first_own_method - #{x} and #{y}"
+  end
+
+  def first_instance_method(x, y)
+    p "FirstIN first_instance_method - #{x} and #{y}"
+  end
+
+  module ClassMethods
+    def first_class_method(x, y)
+      p "FirstIN::ClassMethods first_class_method - #{x} and #{y}"
+    end
+
+    def self.first_own_class_method(x, y)
+      p "FirstIN::ClassMethods first_own_class_method - #{x} and #{y}"
+    end
+  end
+end
+
+module LastIN; end;
+
+module FirstLH; end
+module LastLH; end
+module ConfuseLH; end
+
+module FirstRH; end
+module LastRH; end
+module ConfuseRH; end;
+
+module IN
+  include FirstIN
+  include LastIN
+end
+
+class RHS
+  include FirstRH
+  include ConfuseRH
+  include IN
+  include LastRH
+end
+
 {'class' => ["< RHS", ".new"], 'module' => ['', '']}.each do |key, rhs|
   eval("#{key} LHS#{key.capitalize} #{rhs[0]}; include FirstLH; include ConfuseRH; include IN; include ConfuseLH; include LastLH; end;")
 
@@ -272,14 +314,8 @@ class RHS; include FirstRH; include ConfuseRH; include IN; include LastRH; end;
   p eval("if LHS#{key.capitalize}.respond_to?(:superclass); LHS#{key.capitalize}.superclass; else; 'No superclass method defined for LHS#{key.capitalize}'; end")
   p eval("LHS#{key.capitalize}.ancestors")
 
-  p "Checking in ancestors of LHS#{key.capitalize}"
-  array = eval("LHS#{key.capitalize}.ancestors")
-  array.each do |anc|
-    p eval("LHS#{key.capitalize}.is_a?(anc)")
-  end
-
-  p "Checking in ancestors of #{key.capitalize} - subset of above"
-  array = eval("#{key.capitalize}.ancestors")
+  p "Checking in ancestors of LHS#{key.capitalize}.class - subset of above"
+  array = eval("LHS#{key.capitalize}.class.ancestors")
   array.each do |anc|
     p eval("LHS#{key.capitalize}.is_a?(anc)")
   end
@@ -290,14 +326,8 @@ class RHS; include FirstRH; include ConfuseRH; include IN; include LastRH; end;
   p eval("if instance_obj.respond_to?(:superclass); instance_obj.superclass; else; 'No superclass method defined for instance_obj'; end")
   p eval("if instance_obj.respond_to?(:ancestors); instance_obj.ancestors; else; 'No ancestors method defined for instance_obj'; end")
 
-  p "Checking instance_obj in ancestors of LHS#{key.capitalize}"
-  array = eval("LHS#{key.capitalize}.ancestors")
-  array.each do |anc|
-    p eval("instance_obj.is_a?(anc)")
-  end
-
-  p "Checking instance_obj in ancestors of #{key.capitalize}"
-  array = eval("#{key.capitalize}.ancestors")
+  p "Checking instance_obj in ancestors of instance_obj.class"
+  array = eval("instance_obj.class.ancestors")
   array.each do |anc|
     p eval("instance_obj.is_a?(anc)")
   end
@@ -305,3 +335,90 @@ class RHS; include FirstRH; include ConfuseRH; include IN; include LastRH; end;
   puts ""
   puts ""
 end
+
+class TestModule
+  include FirstIN
+  extend FirstIN                # don't extend this if segregation needed between class/instance methods
+  extend FirstIN::ClassMethods  # preferred way is to add it in included method of the module
+end
+
+test = TestModule.new
+test.first_instance_method(1, "inst_obj") rescue p "inst_obj.first_instance_method not present"
+test.first_class_method(2, "inst_obj") rescue p "inst_obj.first_class_method not present"
+test.first_own_method(3, "inst_obj") rescue p "inst_obj.first_own_method not present"
+puts ""
+TestModule.first_instance_method(1, "TestModule") rescue p "TestModule.first_instance_method not present"
+TestModule.first_class_method(2, "TestModule") rescue p "TestModule.first_class_method not present"
+TestModule.first_own_method(3, "TestModule") rescue p "TestModule.first_own_method not present"
+puts ""
+FirstIN.first_instance_method(1, "FirstIN") rescue p "FirstIN.first_instance_method not present"
+FirstIN.first_class_method(2, "FirstIN") rescue p "FirstIN.first_class_method not present"
+FirstIN.first_own_method(3, "FirstIN") rescue p "FirstIN.first_own_method not present"
+FirstIN::ClassMethods.first_class_method(4, "FirstIN::ClassMethods") rescue p "TestModule::ClassMethods.first_class_method not present"
+FirstIN::ClassMethods.first_own_class_method(5, "FirstIN::ClassMethods") rescue p "TestModule::ClassMethods.first_own_class_method not present"
+puts ""
+
+
+autoload :LoadedClass, "load_it"
+
+class TestLoad
+  def initialize
+    $LOAD_PATH.push(__dir__)
+  end
+
+  def test_load
+    p "Calling test_load"
+    p "Includes required class before load - #{Kernel.const_defined?("LoadedClass")}"
+    load "load_it.rb"
+    p "Includes required class after load - #{Kernel.const_defined?("LoadedClass")}"
+    p "Doing it again"
+    # throws warning
+    load "load_it.rb"
+    p "Includes required class after second load - #{Kernel.const_defined?("LoadedClass")}"
+  end
+
+  def test_wrapped_load
+    $OtherGlobal = "Before Loading The File"
+    var = $OtherGlobal
+    p "Calling test_wrapped_load"
+    p "Load path, Current Directory: ", $LOAD_PATH.join(','), __dir__
+    puts ""
+    p "Includes required class before wrapped load - #{Kernel.const_defined?("LoadedClass")}"
+    load "load_it.rb", true
+    p "Includes required class after wrapped load - #{Kernel.const_defined?("LoadedClass")}"
+    p "Doing it again"
+    # no warnings thrown - completely anonymous
+    load "load_it.rb", true
+    p "Includes required class after second wrapped load - #{Kernel.const_defined?("LoadedClass")}"
+    p "Var, OtherGlobal - #{var == $OtherGlobal}"
+  end
+
+  def test_autoload
+    p "Calling test_autoload"
+    # gives nil, unless testload.test_load is commented below
+    p Module.autoload?(:LoadedClass)
+    # gives nil always
+    p Module.autoload?(:RandomClass)
+  end
+
+  def test_require
+    p "Calling test_require"
+    pre_req = $LOADED_FEATURES
+    $LOADED_FEATURES.delete("#{__dir__}/load_it.rb")
+    # warnings thrown
+    require "load_it"
+    p "loaded features same after require - #{pre_req == $LOADED_FEATURES}"
+#    p "Loaded features: ", $LOADED_FEATURES
+  end
+end
+
+testload = TestLoad.new
+
+testload.test_wrapped_load
+puts ""
+testload.test_load
+puts ""
+testload.test_autoload
+puts ""
+testload.test_require
+puts ""
