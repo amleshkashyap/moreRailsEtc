@@ -305,7 +305,7 @@
       1. class - create an object which will return "Class" for "class" method - always
       2. module - create an object which will return "Module" for "class" method, "Object" for "superclass" method - always
     - Also, lambda creates an object which will return "Proc" for "class" method, "Object" for "superclass" method - no end required, just a block.
-    - Consider this - this clarifies the constant/method resolution algo too somewhat -
+    - Consider this - this clarifies the constant/method resolution algo too somewhat, and useful for metaprogramming -
     ```Ruby
       module FirstIN; end; module LastIN; end;
       module FirstLH; end; module LastLH; end; module ConfuseLH; end;
@@ -343,12 +343,12 @@
         # "Printing for module - class, superclass, ancestors"
         # Module
         # "No superclass method defined for LHSModule"
-        # [LHSClass, LastLH, ConfuseLH, IN, LastIN, FirstIN, ConfuseRH, FirstLH]
+        # [LHSModule, LastLH, ConfuseLH, IN, LastIN, FirstIN, ConfuseRH, FirstLH]
 
         # "Printing for instance_obj - class, superclass, ancestors"
         # Module
         # "No superclass method defined for instance_obj"
-        # [LHSClass, LastLH, ConfuseLH, IN, LastIN, FirstIN, ConfuseRH, FirstLH]
+        # [LHSModule, LastLH, ConfuseLH, IN, LastIN, FirstIN, ConfuseRH, FirstLH]
     ```
     - instance\_of? is a straighforward method => obj.instance\_of?(X) method returns true only when X == obj.class. objects created using module and class keywords
       are instance\_of? Module and Class respectively. Any instance object is an instance\_of? its class (even class/module does a Class.new/Module.new).
@@ -359,7 +359,7 @@
       4. summary - for an object AnyObj, is_a? returns true for every element of AnyObj.class.ancestors
 
 ### Modules
-  * Clearly, modules doesn't have the inheritance property (although it has ancestors) - no superclass method.
+  * Clearly, modules don't have the inheritance property (although it has ancestors) - no superclass method.
   * Modules don't have a new method too, so an instance object is always an instance of an object whose class is Class (never Module).
     - Module can have instance and class methods - it's instance methods are useless unless the module is included in some class.
     - Its class methods are it's "own" methods - any instance of anything doesn't have access to it.
@@ -382,46 +382,6 @@
     - Clearly, including modules effects the is\_a? method
     - With all of this mixin, Module can effectively be seen as a class (if one removes the "own" methods) - and thus the multiple inheritance usecase.
     - Instance methods of a module can be converted to its "own" methods by using a keyword module\_function - should be avoided.
-
-### Load
-  * Expects complete filename with extension to be loaded. Usually expects .rb type of files.
-  * Freshly loads whenever called - no caching.
-  * loads with whatever $SAFE variable value is used - relevance?
-  * Uses $LOAD\_PATH global variable value of Ruby for loading when absolute path not present - it returns and array of pre-saved paths for Ruby to load from.
-    - Search start from start of the array
-    - from 1.9, gems are the initial part of this array (with highest version of a particular gem being the default - modifiable though)
-    - these are followed by site specific libraries (??), OS libraries specific for Ruby, standard library and OS default libraries.
-    - use "--disable-gems" if program uses no gems - for some perf improvements - rare.
-    - can add further libraries with "-I" cmd option
-    - $LOAD\_PATH can be modified from within a Ruby program
-    - $LOAD\_PATH is ignored when absolute paths (starts with / or ~) are given to load/require.
-  * loaded files don't have access to the local scope of their place of invocation - global vars/constants which are defined before are available though.
-    - local variables of the loaded files are destroyed after execution is complete, obviously.
-    - the constants/globals defined/modified in the loaded file are however retained - so it can change the global state of the program.
-    - when the file is changed, and then we do a load again on that (in the same context though - eg, single irb session) - some warnings are thrown. these changes
-      should preferably be wrt the constants (classes/modules are also constants).
-    - load can't be used for nesting though, ie, open a class, load some methods from a file - doesn't work. new classes can be added to the global state though.
-    - there's no object passed to the loaded file, and thus the default object at start of loaded file is main.
-    - load(file) - can be considered similar to doing - eval File.read(file)
-  * When a non-nil/non-false 2nd argument is passed to load, it doesn't allow the file to change the global state of the program as before
-    - basically, constants defined/modified in the file aren't reflected in the global state of the program
-    - global variables can still be modified though
-    - it is achieved by "wrapping the file and loading it inside an anonymous module" - unlike before, any constants of the file aren't remembered.
-    - Sandbox env's don't use require, and loads are always wrapped - it's considered safe, and used infrequently.
-    - load(file, true) - can be considered similar to doing - Module.new.module\_eval(File.read(file))
-    - good article here - https://practicingruby.com/articles/ways-to-load-code
-  * Autoloading - lazy loading of files on a need basis. register uninitialized constants to be loaded from a specific file, when referenced.
-    - autoload :some\_class, "filename\_to\_load"
-    - uses require for loading rather than load
-    - autoload?/Module.autoload? with a symbol argument will give the filename that'll be loaded when the symbol is referenced (nil if not registered/loaded already).
-
-### Require
-  * Can work with just a name - if 2 files of same name but different extensions are present in the relevant directory searched first, .rb is given highest preference,
-    followed by relevant binary files of the OS (eg, .so/.dll).
-    - thus, can work both with ruby source code and binaries - preferred for binaries though.
-  * Caches the loaded files in global variable $LOADED\_FEATURES - since 1 file can be given by more than one, but not too many path strings, there's barely any
-    duplications/reloads.
-  * require is safer than load via some $SAFE variable related thing (for tainted objects).
 
 ### Singleton Methods, Singleton/Eigen/Meta Class
   * singleton is a class with only one instance - so a new Class object, ClObj = Class.new, is just one object - it can have a singleton/meta class.

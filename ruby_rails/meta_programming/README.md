@@ -78,10 +78,33 @@
     - this knowledge along with metaprogramming can be used to redefine method\_missing and then do something, eg, either create the method with some default 
       operation, or throw a different error message, etc
 
-  * instance\_eval
-    - this method is used to create a method for a class which isn't visible to the instances of the class (ie, it gets added to the metaclass of the class)
-    - can be used to create a method specific to an object as well (note: class is also an object so if used with class, then the method goes to metaclass of class)
+  * eval - evaluates a string argument - can evaluate in context of a Binding object (ie, bunch of stored information) if Binding object is 2nd argument.
+    - can call Binding.eval too instead of passing Binding as argument to eval (ie, Kernel.eval)
+    - can pass Proc object as second argument too - by creating a Binding object for a block of code via Proc.binding
+    - must be avoided at all costs if input to eval is not known (unsafe code)
+    - with the second argument possible, and the fact that it would be somewhere converting the string to a block - we've some spinoffs below.
 
-  * class\_eval
-    - this method is used to create a method for a class which is visible to every instance of the class (ie, it becomes part of the metaclass of every instance)
+  * instance\_eval
+    - The arguments to this can be a string as well as a block (eval takes a string only)
+    - The string/block is evaluated in context of the receiver object (self, if nothing specified) - the attributes of the receiver object are accessible in the
+      arguments passed for evaluation - although if any attributes are not used, it's similar to eval (if string is passed).
+    - Since a block/string can be evaluated in context of the (only one) receiver object, it's possible to add singleton methods to that object -
+      1. for class object, class methods are added (ie, to the metaclass of the class)
+      2. for instance object, singleton methods are added to that object's metaclass
+
+  * class\_eval (also called module\_eval)
+    - this method is used to create a method for a class which is visible to every instance of the class (ie, it becomes part of the metaclass of every instance).
+
+  * instance\_exec, class\_exec
+    - instance\_exec is like instance\_eval, but it doesn't accept string arguments, only blocks
+      1. with this limitation, there's an extension that the passed block can accept arguments
+      2. so instance\_exec has access to receiver object's variables + some extra arguments
+    - class\_exec similar to class\_eval with above differences.
+
+  * Hooks
+    - In Object, Module, Class - method names end with "ed" generally for easy identification.
+    - an example is the included method seen earlier in Module for separating class/instance methods. similarly we have extended method.
+    - inherited - called on the superclass which is being inherited by another (when the latter is defined, this is called).
+    - method\_added, method\_removed, method\_undefined - whenever a new method is added/removed/undefined from a class/module.
+    - singleton\_method\_added, singleton\_method\_removed, singleton\_method\_undefined - for tracking singleton methods like above.
 

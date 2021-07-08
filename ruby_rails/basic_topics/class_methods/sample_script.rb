@@ -359,7 +359,8 @@ FirstIN::ClassMethods.first_own_class_method(5, "FirstIN::ClassMethods") rescue 
 puts ""
 
 
-autoload :LoadedClass, "load_it"
+# uncommenting this will make it available to Kernel, wrapped load will still not throw any warnings though
+# autoload :LoadedClass, "load_it"
 
 class TestLoad
   def initialize
