@@ -34,6 +34,7 @@ class ObjectPrinter
   def print_object_details
     p "Object Is Of Class: #{@current.class}, With Parent: #{@superclass ? @superclass : 'None'}"
     p "Ancestors Are: #{@ancestors}, And It is_a? #{@current.class.ancestors}"
+    p "Type is: Class #{@is_class}, Module: #{@is_module}, Instance Obj: #{self.is_instance_object?}, Allocated: #{@is_allocated}"
   end
 
   # shared between instance and class objects
@@ -46,14 +47,14 @@ class ObjectPrinter
     end
   end
 
-  def print_class_methods_if_instance
-    return unless self.is_instance_object?
+  def print_class_methods_if_instance_or_allocated
+    return unless (self.is_instance_object? || @is_allocated)
     methods = self.get_singleton_methods(@current.class)
     p "Class Methods For Instance Object: #{methods}"
   end
 
   def print_instance_methods_unless_instance
-    return if self.is_instance_object?
+    return if (self.is_instance_object? || @is_allocated)
     begin
       methods = self.get_instance_methods
       p "Instance Methods For Non-Instance Object: #{methods}, Of Class: #{@current.class}"
@@ -66,6 +67,7 @@ class ObjectPrinter
   def print_singleton_methods(own_methods)
     methods = self.get_singleton_methods - own_methods
     p "Singleton Methods: #{methods}"
+    return methods
   end
 
   # relies on the assumption that for all non-class instance objects, instance variables are present in its singleton_class
@@ -78,19 +80,32 @@ class ObjectPrinter
     end
   end
 
-  def print_methods
+  def print_own_methods
     begin
-      own_methods = self.is_instance_object? ? self.get_instance_methods(@current.class) : self.get_singleton_methods
+      # any methods defined manually while writing the definition in the code rather than created at runtime (but includes runtime for class/module)
+      own_methods = (@is_class || @is_module) ? self.get_singleton_methods : self.get_instance_methods(@current.class)
       p "Own Methods: #{own_methods}"
     rescue
-      p "No Expected Own Methods For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
+      p "No Expected Own Methods For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}, Methods: #{self.get_all_methods}"
       own_methods = []
     end
     if @verbosity > 0
-      self.print_singleton_methods(own_methods)
-      self.print_class_methods_if_instance
+      # any singleton methods apart from the own methods, defined manually
+      singleton_methods = self.print_singleton_methods(own_methods)
+      # for any instance kind of objects, its class methods defined manually
+      self.print_class_methods_if_instance_or_allocated
+      # for any class/module, its instance methods defined manually
       self.print_instance_methods_unless_instance
+      if @verbosity > 1
+        # any inherited methods of the object
+        self.print_inherited_methods(own_methods, singleton_methods)
+      end
     end
+  end
+
+  def print_inherited_methods(own_methods, singleton_methods)
+    inherited_methods = @current.methods - own_methods - singleton_methods
+    p "Inherited Methods: #{inherited_methods}"
   end
 
   # shared between instance and class objects
@@ -109,15 +124,29 @@ class ObjectPrinter
     self.print_object_details
     self.print_class_vars
     self.print_instance_vars
-    self.print_methods
+    # methods defined manually for the object - by its class, or metaclass
+    self.print_own_methods
     self.print_constants
     puts ""
   end
 
   INSTANCE_EXIT = :dup
-  SINGLETON_EXIT = :new
+  SINGLETON_EXIT = [:new, :allocate]
+  ALL_EXIT = [:dup, :new, :allocate]
 
   private
+
+  def get_all_methods(object=@current, exit_at=ALL_EXIT)
+    methods = []
+    object.methods.each do |meth|
+      if exit_at.include?(meth)
+        break
+      else
+        methods.push(meth)
+      end
+    end
+    methods
+  end
 
   def get_instance_methods(object=@current, exit_at=INSTANCE_EXIT)
     methods = []
@@ -134,7 +163,7 @@ class ObjectPrinter
   def get_singleton_methods(object=@current, exit_at=SINGLETON_EXIT)
     methods = []
     object.singleton_methods.each do |meth|
-      if meth == exit_at
+      if exit_at.include?(meth)
         break
       else
         methods.push(meth)
@@ -172,3 +201,8 @@ rescue
   p "Bindings are: "
   obj_printer.describe_object(TOPLEVEL_BINDING, 1)
 end
+
+obj_printer.describe_object(ARGV, 1)
+obj_printer.describe_object(RUBY_VERSION, 1)
+obj_printer.describe_object(nil, 1)
+obj_printer.describe_object(NilClass, 1)
