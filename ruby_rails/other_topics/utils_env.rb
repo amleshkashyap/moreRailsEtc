@@ -8,7 +8,7 @@ class ObjectPrinter
     # undef :new
 
     def print_inside_class(arg=@class_inst_var)
-      p "Class instance variable is: #{arg}"
+      p "  Class instance variable is: #{arg}"
     end
   end
 
@@ -33,40 +33,40 @@ class ObjectPrinter
 
   def print_object_details
     p "Object Is Of Class: #{@current.class}, With Parent: #{@superclass ? @superclass : 'None'}"
-    p "Ancestors Are: #{@ancestors}, And It is_a? #{@current.class.ancestors}"
-    p "Type is: Class #{@is_class}, Module: #{@is_module}, Instance Obj: #{self.is_instance_object?}, Allocated: #{@is_allocated}"
+    p "  Ancestors Are: #{@ancestors}, And It is_a? #{@current.class.ancestors}"
+    p "  Type is: Class #{@is_class}, Module: #{@is_module}, Instance Obj: #{self.is_instance_object?}, Allocated: #{@is_allocated}"
   end
 
   # shared between instance and class objects
   def print_class_vars
     begin
       class_vars = self.is_instance_object? ? @current.class.class_variables : @current.class_variables
-      p "Class Variables: #{class_vars}, For Class: #{@current.class}"
+      p "  Class Variables: #{class_vars}, For Class: #{@current.class}"
     rescue
-      p "Expected Class Variables Not Found For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
+      p "  Expected Class Variables Not Found For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
     end
   end
 
   def print_class_methods_if_instance_or_allocated
     return unless (self.is_instance_object? || @is_allocated)
     methods = self.get_singleton_methods(@current.class)
-    p "Class Methods For Instance Object: #{methods}"
+    p "  Class Methods For Instance Object: #{methods}"
   end
 
   def print_instance_methods_unless_instance
     return if (self.is_instance_object? || @is_allocated)
     begin
       methods = self.get_instance_methods
-      p "Instance Methods For Non-Instance Object: #{methods}, Of Class: #{@current.class}"
+      p "  Instance Methods For Non-Instance Object: #{methods}, Of Class: #{@current.class}"
     rescue
-      p "Expected Instance Methods Not Found For Non-Instance Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
+      p "  Expected Instance Methods Not Found For Non-Instance Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
     end
   end
 
   # methods in the metaclass apart from the own methods - in this ruby, class methods == singleton methods of the class object
   def print_singleton_methods(own_methods)
     methods = self.get_singleton_methods - own_methods
-    p "Singleton Methods: #{methods}"
+    p "  Singleton Methods: #{methods}"
     return methods
   end
 
@@ -74,9 +74,9 @@ class ObjectPrinter
   def print_instance_vars
     begin
       instance_vars = self.is_instance_object? ? @current.instance_variables : @current.singleton_class.instance_variables
-      p "Instance Variables: #{instance_vars}"
+      p "  Instance Variables: #{instance_vars}"
     rescue
-      p "Expected Instance Variables Not Found For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
+      p "  Expected Instance Variables Not Found For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
     end
   end
 
@@ -84,9 +84,9 @@ class ObjectPrinter
     begin
       # any methods defined manually while writing the definition in the code rather than created at runtime (but includes runtime for class/module)
       own_methods = (@is_class || @is_module) ? self.get_singleton_methods : self.get_instance_methods(@current.class)
-      p "Own Methods: #{own_methods}"
+      p "  Own Methods: #{own_methods}"
     rescue
-      p "No Expected Own Methods For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}, Methods: #{self.get_all_methods}"
+      p "  No Expected Own Methods For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}, Methods: #{self.get_all_methods}"
       own_methods = []
     end
     if @verbosity > 0
@@ -105,16 +105,16 @@ class ObjectPrinter
 
   def print_inherited_methods(own_methods, singleton_methods)
     inherited_methods = @current.methods - own_methods - singleton_methods
-    p "Inherited Methods: #{inherited_methods}"
+    p "    Inherited Methods: #{inherited_methods}"
   end
 
   # shared between instance and class objects
   def print_constants
     begin
-      constants = self.is_instance_object? ? @current.class.constants : @current.constants
-      p "Constants: #{constants}"
+      constants = (@is_class || @is_module) ? @current.constants : @current.class.constants
+      p "  Constants Are: #{constants}"
     rescue
-      p "No Expected Constants For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
+      p "  No Expected Constants For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
     end
   end
 
@@ -176,10 +176,6 @@ end
 
 
 obj_printer = ObjectPrinter.new
-obj_printer_confuse = ObjectPrinter.new
-obj_printer.describe_object(obj_printer_confuse, 1)
-obj_printer.describe_object(ObjectPrinter, 1)
-# exit
 
 # convert a symbol to a string, and then string to a constant - prints the Modules loaded
 p Module.constants.sort.select { |x| eval(x.to_s).instance_of?(Module) }
@@ -198,11 +194,36 @@ begin
 rescue
   p "Error thrown, message: #{$!.message}, backtrace: #{$!.backtrace}"; puts ""
   p "In Process: #{$$}, arguments: #{ARGV}, last successful process: #{$?}, #{RUBY_VERSION}"; puts "";
-  p "Bindings are: "
-  obj_printer.describe_object(TOPLEVEL_BINDING, 1)
 end
 
-obj_printer.describe_object(ARGV, 1)
-obj_printer.describe_object(RUBY_VERSION, 1)
-obj_printer.describe_object(nil, 1)
+def some_global_function
+end
+
+# now check some objects
+# Global Constants
+obj_printer.describe_object(ARGV, 1)    # instance of Array
+obj_printer.describe_object(RUBY_VERSION, 1)    # instance of String
+obj_printer.describe_object($$, 1)    # Process ID - class Integer, allocated
+obj_printer.describe_object($!, 1)    # Global Exception object - it's a nilclass, allocated
+obj_printer.describe_object($*, 1)    # Global Exception bakctrace - instance of Array
+obj_printer.describe_object(TOPLEVEL_BINDING, 1)    # allocated Binding object
+# Literals
+obj_printer.describe_object(nil, 1)    # allocated NilClass object
+obj_printer.describe_object("string", 1)    # instance of String
+obj_printer.describe_object(0, 1)    # allocated Integer object
+obj_printer.describe_object(true, 1)    # allocated TrueClass object
+# Class Objects
 obj_printer.describe_object(NilClass, 1)
+obj_printer.describe_object(File, 1)
+obj_printer.describe_object(ObjectPrinter, 1)
+# Module Objects
+obj_printer.describe_object(Kernel, 1)
+obj_printer.describe_object(Module.new, 1)
+# Lambdas
+obj_printer.describe_object(lambda {|x| p x}, 1)
+# Method Objects
+obj_printer.describe_object(Kernel.method(:some_global_function), 1)    # allocated Method object
+obj_printer.describe_object(obj_printer.method(:print_constants), 1)    # allocated Method object
+# Instance Objects
+obj_printer_confuse = ObjectPrinter.new
+obj_printer.describe_object(obj_printer_confuse, 1)
