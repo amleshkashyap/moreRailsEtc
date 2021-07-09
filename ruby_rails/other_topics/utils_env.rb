@@ -18,14 +18,14 @@ class ObjectPrinter
 
   def is_instance_object?
     # metaclass of an instance object doesn't have a superclass in concept, but in this Ruby, it's the class of the instance object - class has :new method
-    @current.class.methods.include?(:new) && (@current.singleton_class.superclass == @current.class)
+    (not @is_class) && (not @is_module) && @current.class.methods.include?(:new) && (@current.singleton_class.superclass == @current.class)
   end
 
   def setup_object(obj, level)
     @current = obj
     @is_class = (@current.class == Class)
     @is_module = (@current.class == Module)
-    @is_unknown = !(self.is_instance_object? || @is_class || @is_module)
+    @is_allocated = !(self.is_instance_object? || @is_class || @is_module)
     @superclass = @current.respond_to?(:superclass) ? @current.superclass : nil
     @ancestors = @current.respond_to?(:ancestors) ? @current.ancestors : []
     @verbosity = level
@@ -42,7 +42,7 @@ class ObjectPrinter
       class_vars = self.is_instance_object? ? @current.class.class_variables : @current.class_variables
       p "Class Variables: #{class_vars}, For Class: #{@current.class}"
     rescue
-      p "Expected Class Variables Not Found For This Object Of Class: #{@current.class}"
+      p "Expected Class Variables Not Found For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
     end
   end
 
@@ -58,7 +58,7 @@ class ObjectPrinter
       methods = self.get_instance_methods
       p "Instance Methods For Non-Instance Object: #{methods}, Of Class: #{@current.class}"
     rescue
-      p "Expected Instance Methods Not Found For Non-Instance Object Of Class: #{@current.class}"
+      p "Expected Instance Methods Not Found For Non-Instance Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
     end
   end
 
@@ -74,7 +74,7 @@ class ObjectPrinter
       instance_vars = self.is_instance_object? ? @current.instance_variables : @current.singleton_class.instance_variables
       p "Instance Variables: #{instance_vars}"
     rescue
-      p "Expected Instance Variables Not Found For This Object Of Class: #{@current.class}"
+      p "Expected Instance Variables Not Found For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
     end
   end
 
@@ -83,7 +83,7 @@ class ObjectPrinter
       own_methods = self.is_instance_object? ? self.get_instance_methods(@current.class) : self.get_singleton_methods
       p "Own Methods: #{own_methods}"
     rescue
-      p "No Expected Own Methods For This Object Of Class: #{@current.class}"
+      p "No Expected Own Methods For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
       own_methods = []
     end
     if @verbosity > 0
@@ -99,7 +99,7 @@ class ObjectPrinter
       constants = self.is_instance_object? ? @current.class.constants : @current.constants
       p "Constants: #{constants}"
     rescue
-      p "No Expected Constants For This Object Of Class: #{@current.class}"
+      p "No Expected Constants For This Object Of Class: #{@current.class}, Allocated: #{@is_allocated}"
     end
   end
 
@@ -111,6 +111,7 @@ class ObjectPrinter
     self.print_instance_vars
     self.print_methods
     self.print_constants
+    puts ""
   end
 
   INSTANCE_EXIT = :dup
