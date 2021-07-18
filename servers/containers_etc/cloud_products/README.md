@@ -2,9 +2,7 @@
   * Anthos - Faster application modernization.
     - Run k8s clusters in existing cloud and on-premise infrastructure.
     - Configure and send security policies across all k8s clusters.
-    - Service mesh - (1) manage traffic between services and outside services (allows blue green deployments, control over specific routes for services, load balancing
-      configuration between services, etc), (2) metrics and logs related to the services for health, dependencies, security and overall monitoring, (3) uses mutual
-      TLS (??) instead of bearer tokens - somehow gives better authentication, encryption in traffic transit, monitor who accessed sensitive data, etc.\
+    - Service mesh powered by Istio, which is based on Envoy.
 
   * Google Kubernetes Engine - 
     - Scaling upto 15,000 nodes.
