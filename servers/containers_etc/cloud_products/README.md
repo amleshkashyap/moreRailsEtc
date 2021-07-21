@@ -57,3 +57,11 @@
 
   * Tekton - 
 
+
+### Ex. AWS
+  * Lambda - serverless, FaaS
+    - possibility of deployment without any manual intervention - using serverless.yml.
+    - can mention the various events on which the lambda has to react upon, and how it'll react.
+
+  * SQS - queueing service for sharing messages.
+
