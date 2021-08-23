@@ -118,3 +118,26 @@
   * Database
   * Files
 
+### Authentication
+  * Basic
+    - Username and password sent by the client to server to verify the user. Many possible forms, eg, plain-text username and encrypted password or plain text
+      password which is then passed to a hash function which was used to create a hash before storing it in the DB.
+    - Other forms include username:session\_id pair.
+  * Session Based
+    - Session created by server, stored within cookies (ie, session id) on client's browser.
+    - Client (eg, browser, postman) sends cookie with every request to verify itself (this is also a source of CSRF attacks as mentioned above).
+    - Scaling can be a problem if huge number of users.
+    - More suitable for browser/UI based applications.
+  * Token Based
+    - For example, JSON Web Tokens, created by server with a secret and sent to the client which may store it in local storage. Client sends this as header in every
+      request.
+    - Since JWT is a specification, with standard headers and payload (can be custom too) which are further encoded to prepare the signature, and the three
+      are then encoded to prepare the final token - using the secret - all of this can be recreated without storage, or can reduce the DB queries - but that's not
+      the real reason for using it (ie, reducing DB queries).
+    - When JWT is sent as part of Authorization header - somehow reduces CORS issues. Performing a CSRF might be difficult, as their are no cookies to be used by
+      default with every request made to a target website - Authorization header needs to be populated with JWT stored in local storage.
+    - Shouldn't store for too long in the browser storage.
+    - May lead to scaling issues if too much info stored in server.
+    - JWT Can grow large in size because more information is stored.
+    - More suitable for backend/API only applications.
+    - Playground - https://jwt.io/#debugger-io
