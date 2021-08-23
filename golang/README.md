@@ -60,3 +60,9 @@
       1. type interface_name interface { concat() string; combined_length() int }    // defines interface with 2 functions that can be implemented
       2. type ThreeStrings struct { str1, str2, str3 string }    // defines struct with 3 string members
       3. func (struct_var ThreeStrings) concat() string { return (struct_var.str1 + struct_var.str2 + struct_var.str3) }    // implement concat() method
+
+#### Sources
+  * [How To Pass Generic Types In Go](https://medium.com/@motemen/achieving-type-generic-functions-in-go-without-using-reflections-40bc06111970)
+  * [Tutorials Point](https://www.tutorialspoint.com/go/go_pointers.htm)
+  * [Find Variable Types](https://www.geeksforgeeks.org/different-ways-to-find-the-type-of-variable-in-golang/)
+  * [Concurrency In Golang](https://tour.golang.org/concurrency/1)
