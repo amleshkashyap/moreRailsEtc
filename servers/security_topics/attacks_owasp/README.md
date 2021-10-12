@@ -82,7 +82,7 @@
     - Vulnerabilities and Methods -
       1. Version of client/server side components and libraries.
       2. Other vulnerable/unsupported components like OS, web server, DBMS, APIs, runtime environments, libraries.
-      3. Security miconsifurations above.
+      3. Security misconfigurations above.
       4. Updates and scans for recently found vulnerabilities.
   * Insufficient Monitoring and Logging (2017) -
     - Systems can be exploited for long durations without being detected.
@@ -106,6 +106,26 @@
     - Leakage of internal workings, configurations, sensitive data, internal state (eg, time taken for operations, different responses to slightly different inputs),
       detailed debug error messages (stack traces, failed SQL queries). A function for login should ideally generate same text for no user/bad password inputs.
 
+
+### Other OWASP Attacks
+  * CSV Injection -
+    - In CSV files, a cell starting with = is treated as a formula. Also, a normal cell can be ended using "," or ";" and then new entries started with =.
+    - If application is allowing uploading of CSV files, or converting user input to CSV and uploading it to server, then restrictions are required.
+    - Formula can be utilised for -
+      1. 
+      2. 
+      3. 
+    - 
+  * Host Header Injection -
+    - Virtual Hosting -
+      1. Name based - 
+      2. IP Address based -
+      3. Port based -
+    - 
+  * Typosquatting -
+    - Owning domain names created by changing spelling of the original domain - eg, Goggle.com - and hosting ads, alternative apps or other malicious apps.
+    - Also created using different top level domain, eg, .co, .com, .org, .cm, etc
+
 ### Components That Facilitate Attacks
   * Cookies -
   * Headers -
@@ -117,27 +137,3 @@
 ### Which Components Can Be Exploited By An Attack
   * Database
   * Files
-
-### Authentication
-  * Basic
-    - Username and password sent by the client to server to verify the user. Many possible forms, eg, plain-text username and encrypted password or plain text
-      password which is then passed to a hash function which was used to create a hash before storing it in the DB.
-    - Other forms include username:session\_id pair.
-  * Session Based
-    - Session created by server, stored within cookies (ie, session id) on client's browser.
-    - Client (eg, browser, postman) sends cookie with every request to verify itself (this is also a source of CSRF attacks as mentioned above).
-    - Scaling can be a problem if huge number of users.
-    - More suitable for browser/UI based applications.
-  * Token Based
-    - For example, JSON Web Tokens, created by server with a secret and sent to the client which may store it in local storage. Client sends this as header in every
-      request.
-    - Since JWT is a specification, with standard headers and payload (can be custom too) which are further encoded to prepare the signature, and the three
-      are then encoded to prepare the final token - using the secret - all of this can be recreated without storage, or can reduce the DB queries - but that's not
-      the real reason for using it (ie, reducing DB queries).
-    - When JWT is sent as part of Authorization header - somehow reduces CORS issues. Performing a CSRF might be difficult, as their are no cookies to be used by
-      default with every request made to a target website - Authorization header needs to be populated with JWT stored in local storage.
-    - Shouldn't store for too long in the browser storage.
-    - May lead to scaling issues if too much info stored in server.
-    - JWT Can grow large in size because more information is stored.
-    - More suitable for backend/API only applications.
-    - Playground - https://jwt.io/#debugger-io

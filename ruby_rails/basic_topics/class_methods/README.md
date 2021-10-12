@@ -61,7 +61,7 @@
     iterators). Other use cases too.
   * "\*" is used before a formal parameter to represent an array of params, while it can be used before an actual param to indicate an array to be unpacked.
 
-## proc and lambda -
+### proc and lambda -
   * Class "Proc" has objects of type - lambda, proc. lambda is like a method/function, proc is like a block. "lambda?" method to differentiate Proc objects.
   * One way to create a proc is via using '&block' argument and passing a block at invocation.
   * (a) Proc.new \<block\>, or just, (Kernel.)proc \<block\> (for proc), (b).(i) (Kernel.)lambda \<block\> (for lambda), (ii) lambda {|x| p x} == ->(x){ p x }, 
@@ -71,7 +71,7 @@
   * There's a concept of arity, ie, number of arguments to the block, which get confusing when arguments can variable (ie, uses \*). Ignoring.
   * Two Proc objects will return true for equality test when created using clone/dup methods - write a parser to identify equivalent blocks in a large codebase?
 
-## Closures - 
+### Closures - 
   * lambdas/procs can be defined inside a method using blocks, and these blocks can use the local vars/args of the method.
   * These Proc objects can then be created outside the method using specific argument "values" to the method (ie, the method would return lambdas/procs specifically
     created using those "values"). Now these procs/lambdas must be able to retain those "values" if they're to be of any use, ie, when they're invoked after creation.
