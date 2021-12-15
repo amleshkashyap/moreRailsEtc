@@ -86,10 +86,8 @@
 
 ### Other Threats
   * Browser Hijacking -
-    -
 
   * Spamming
-    - 
 
   * Doxing
     - A form of online stalking, acquiring public or semi-public information about people and making them available publically with attention.

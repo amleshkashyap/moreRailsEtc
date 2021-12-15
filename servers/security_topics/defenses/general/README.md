@@ -4,7 +4,7 @@
   * Availability - available on demand/as required.
   * Non repudiation - creator/sender of data can't refuse doing it.
   * Authentication - identify the creator/sender.
-  * Authorization - the one requesting the data must be allowed to have it.
+  * Authorization - the one requesting the data must be allowed to have it if he has the privileges.
 
 
 ### Tools
@@ -32,7 +32,6 @@
 
 ### Other Tools
   * Firewalls -
-    -
 
   * Antivirus -
     - No algorithm can perfectly detect all possible viruses.
