@@ -41,6 +41,11 @@
     - Escaping - Replacing some special characters (eg, <, >, ", &, etc) with others. Inbuilt functions are present in some languages for this.
 
   * Insecure Design - Since 2021
+    - CWEs - Generation of error messages containing sensitive information, unprotected storage/insufficient protection of credentials
+    - A secure design might have imperfect implementation which will lead to a different set of vulnerabilities.
+    - Secure design constantly evaluates threats - eg, looking for changes to the data flow, or access control.
+    - Suitable to have a professional do the evaluation.
+    - Compilation of use cases and misuse cases for the every service/features, limiting the resource consumption by each user/layer/tier.
 
   * Security Misconfiguration - Since 2017
     - Access default accounts, unused pages, unprotected files/directories - gives more knowledge of system.
@@ -80,6 +85,9 @@
       8. Expose session ID in URL.
 
   * Software and Data Integrity Failures - Since 2021
+    - CWEs - Inclusion of functionality from untrusted control spheres, downloading code without integrity checks, deserialization of untrusted data.
+    - Applications relying upon - plugins/libraries/modules from untrusted sources, CDNs, insecure CI/CD pipeline, updating the app without integrity checks.
+    - Tools - Dependency Check, CycloneDX from OWASP for components without any known vulnerabilities.
 
   * Security Logging and Monitoring Failures - Since 2017
     - Systems can be exploited for long durations without being detected.
@@ -91,6 +99,11 @@
       3. Penetration testing and scans by DAST tools don't generate alerts.
 
   * Server Side Request Forgery (SSRF) - Since 2021
+    - Occurs when a webserver fetches from a remote resource without validating the user supplied URL - an attacker can make the server fetch unsafe items.
+    - Increasing prevalence due to a drive for user convenience.
+    - Prevention -
+      1. Segregation of remote resource access functionalities in a separate network.
+      2. Sanitize and validate client supplied data, disabling HTTP redirections, not sending raw responses back to client, enforcing scheme/port, etc.
 
 
 ### Older OWASP Top 10 Attacks
@@ -147,6 +160,11 @@
   * Typosquatting -
     - Owning domain names created by changing spelling of the original domain - eg, Goggle.com - and hosting ads, alternative apps or other malicious apps.
     - Also created using different top level domain, eg, .co, .com, .org, .cm, etc
+
+
+### Common Weakness Enumeration
+  * Another list of security weaknesses for softwares and hardwares - huge list.
+  * [Software](https://cwe.mitre.org/data/definitions/699.html)
 
 
 ### Components That Facilitate Attacks
