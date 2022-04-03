@@ -1,8 +1,19 @@
-### Common Patterns
+### General
+
+  * Trivia -
+    - Design patterns almost always increase abstractions [to reduce complexity].
+    - Abstractions can be understood better by working through a good number of these concrete scenarios.
 
   * Notable Practices -
     - Create and inherit from classes instead of writing new methods to existing classes - base classes should be very general and abstract.
     - Create methods/classes for adding/customising objects.
+
+  * Gamma Categorization -
+    - Creational patterns - explicit and implicit, single statement vs multistatement initialization
+    - Structural patterns - a wrapper around a class, API design (ie, interface)
+    - Behavioral patterns - for specific problems
+
+#### SOLID Principles
 
   * Single Responsibility (Separation of Concern) -
     - A class should have a single responsibility - class files shouldn't be bloated doing all kinds of operations.
@@ -39,10 +50,7 @@
     - Major benefits include flexibility in unit testing, early and easy expression of specifications and easy to understand code.
     - https://stackoverflow.com/a/5698522
 
-  * Gamma Categorization -
-    - Creational patterns - explicit and implicit, single statement vs multistatement initialization
-    - Structural patterns - a wrapper around a class, API design (ie, interface)
-    - Behavioral patterns - for specific problems
+#### Gang of Four Patterns
 
   * Builder -
     - For multistep initialization of objects, builder object provides an API for their construction
@@ -74,3 +82,56 @@
     - Using decorators - decorate a class as singleton and the decorator method ensures there's only one copy
     - Using metaclass - a Singleton metaclass with a method similar to decorator.
     - Using monostate - have a constant and private kind of variable and that can be assigned (shallow copy) to the object at every initialization.
+    - Problems - using Singleton class directly in methods has a disadvantage of making it harder to write good unit tests - if the data contained within the class
+      changes, then the unit tests must change.
+
+  * Adapter -
+    - Converts/adapts an existing interface X to the required interface Y.
+    - Adapter can be a service or a middleware - adapters come into picture when both interface are already written and one needs them to interact without change.
+    - Sometimes, there might be multiple conversions of the same object to another, and we may want to cache those conversion.
+    - Caching can be achieved in various ways, typically dictionary wherein the key is the hash of input object and value is the converted object.
+    - Ex - converting yaml to json with different schemas for both formats.
+
+  * Decorator -
+    - Update the behaviour of an object -
+      - If documentation exists, one might want to do this by updating the existing code.
+      - However, this breaks OCP.
+    - There are other ways to do it -
+      - Creating a child class and adding the behaviour in child class, followed by using the child class - this can add and overrides behaviours.
+        - Generally the child class should inherit from the base class of the object in question [if one exists].
+        - This leads to a problem that the actual object's instance methods aren't accessible to this new class - unless we inherit from each of the child classes
+          of the base class [assuming all/most of them need to be updated].
+      - Passing the method to be
+    - In python, we can have decorators which are methods which accept and return methods - can operate on the input method.
+    - Classic decorators - augments the fucntionality of an existing class [
+    - Dynamic decorators - runtime addition of methods to existing class - obviously required metaclass.
+
+  * Command -
+
+  * Chain Of Responsibility -
+
+  * Interpreter -
+
+  * Observer -
+
+  * Mediator -
+
+  * Composite -
+    - Mechanism for treating single (scalar) and composite objects uniformly - since some scalar and composite objects might behave in similar ways.
+    - A class can serve as a scalar (ie, can contain an array of objects) or as a composite (ie, can contain an array of [objects + array of objects] - many layers)
+    - One of the tricks is to convert a scalar class (ie, returning a single object at init) to iterable (returning just itself).
+    - Another trick is to use a separate class for performing composition related operations and have the relevant classes (which use it) inherit from it.
+      - Explore - how is it connected to/used it rails DB compositions?
+    - In python, make a class iterable using \_\_iter\_\_() method yielding self, or inheriting from Iterable [an abstract base class].
+
+  * Bridge -
+    - Prevents cartesian product complexity explosion - eg, filtering (text search, attribute based) for datastore (mongodb, elastic search, mysql)
+      - Usual - 6 leaf classes, 2 parent, 1 base - 9
+      - Using bridge - 3 leaf classes with 1 parent class, 2 classes which are also inherited by leaf, 1 base - 7 classes
+    - Bridge decouples interface from implementation
+    - Can be done by injecting one base class into another as a dependency
+    - Eg, mongodb, elastic search and mysql classes - their init's have either text search or attribute based filter as input - used for mongodb.filter() method.
+    - This pattern is useful only when a cartesian product of classes needs to be created. It is just a stronger form of encapsulation.
+    - This pattern obviously has to break the open close principle which would've demanded the creation of many classes.
+
+  * Iterator
