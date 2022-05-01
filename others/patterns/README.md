@@ -103,18 +103,70 @@
           of the base class [assuming all/most of them need to be updated].
       - Passing the method to be
     - In python, we can have decorators which are methods which accept and return methods - can operate on the input method.
-    - Classic decorators - augments the fucntionality of an existing class [
-    - Dynamic decorators - runtime addition of methods to existing class - obviously required metaclass.
+      - These functional decorators are different from the GoF decorators [which are the two below].
+    - Classic decorators - augments the functionality of an existing class. Ex. A class that takes another object as input and updates its state [a color adder which
+      takes some shape as argument to init so we can have a new colored shape object].
+      - This has a limitation that the new class which updates some input object [ie, color adder] responds with a new object which doesn't have the methods of the
+        input object.
+    - Dynamic decorators - runtime addition of methods to existing class [may require metaclass?].
+      - This fixes the limitation of classic decorators.
+      - How - update the getters/setters of the new class rather than individually adding every method of the class of the input object.
 
   * Command -
+    - Why
+      - Some actions are irreversible [eg, a variable assignment, a DB commit].
+      - Almost always, we'd like to log/record a set of operations, more so if they're critical [along with who did it and what the inputs were] - helps in debugging,
+        quickly knowing and undoing such irreversible changes [if possible], etc.
+    - Can work with operations as unit, ie, a chunk of work to be done and recorded [and hopefully reversible]. Ex, undo/redo in UI.
+    - Command is an object which represents an operation and all necessary info related to it.
+    - Some immediately visible limitations -
+      - If there are too many commands in a single API call, then there will be too many objects - trying to reuse the command objects doesn't seem correct.
+      - Providing undo/redo options can be risky and needs to be implemented carefully.
+    - Generally, a command class may have invoke, undo and redo methods.
+    - Composite Command - set/list of commands to fix the above problems [ie, too many command objects].
+      - With list of commands, the invoke method also has to be done carefully.
+      - Typically, next operation [command] shall be invoked if previous succeeded [similarly for undo].
 
   * Chain Of Responsibility -
+    - Why
+      - Often chain of commands are executed.
+    - Chain of components, all of whom -
+      - Get a chance to process a command/query
+      - Can have default processing implemented
+      - Can terminate the processing chain
+    - Every component is a class, making the chain as a linked list of objects of the relevant classes.
+      - When one class is done, it transfers to other class [or stops based on some condition, etc].
+    - Command Query separation - set/delete and get to be done using separate methods.
+    - Broker Chain -
+      - Consider when chain of components are part of an event [eg, they're triggered due to an event].
+      - So the event contains relevant context for the chain and must be part of the entities [ie, class/object related code]
 
   * Interpreter -
+    - Why
+      - Static code analysis
+      - File parsers
+      - Regular expressions
+      - Other parsers [eg, expressions, equations]
+    - A component that processes structured data by converting it to lexical tokens followed by interpreting sequence of those tokens [parsing].
+    - Lexing - Break down the input into tokens - define as many as required for the problem at hand.
+    - Parsing - Convert the collected tokens to some data structure and operate on it based on required rules.
+      - Convert the tokens into some object oriented structure, eg, a tree
+      - Operate on the above structure - it's easier to operate on structured data while maintaining consistency. Degree of complication for this operation can vary,
+        sometimes many corner cases possible, sometimes it's just a traversal to identify whether a set of tokens is a another [larger] token of the grammar.
 
   * Observer -
 
   * Mediator -
+    - Why
+      - Systems may have many components which can enter/exit the running program [eg, multiplayer games, chat rooms].
+      - Each component/object need not maintain a reference to every other [unlike social media connections] - since it's a running program.
+      - Some components might enter/exit, others might exit for a sufficiently longer time - need something which can handle both.
+      - Mediator is a component that facilitates communication between these other components - without those components having to handle the references.
+    - Chat room -
+      - Send messages to the room/people in the room via the mediator.
+      - Every person has a reference to the mediator [chat room].
+      - Mediator's [chat room] job is to send/store data to the participants who form the state of the mediator.
+    - Event publish/subscribe can also be handled via mediators - sender/receiver do the sending/receiving via the mediator.
 
   * Composite -
     - Mechanism for treating single (scalar) and composite objects uniformly - since some scalar and composite objects might behave in similar ways.
@@ -135,3 +187,38 @@
     - This pattern obviously has to break the open close principle which would've demanded the creation of many classes.
 
   * Iterator
+    - Why -
+      - Traversing some data structure is a basic operation.
+      - Traversing can be complicated depending on the data structure - eg, list vs tree.
+      - Typically the goal is to go to a next or previous element[s].
+    - Iterator class has a reference to the current element, and knows how to move to a different element.
+      - \_\_iter\_\_() method in python to expose
+      - \_\_next\_\_()
+      - raise an exception when all elements iterated
+    - Iterator will maintain a current element and keep modifying it - this can make the implementation difficult.
+      - \_\_iter\_\_() method shall expose some default traversal implementation. May not expose this method - utilize yield keyword to simplify implementations.
+      - \_\_next\_\_() method might not be required to be exposed.
+      - Stateful traversal? They can't be recursive - use yield.
+    - Updateable properties - we often encounter classes whose attributes might not remain same over time, and many instance methods may possibly be dependent
+      on all [or a list of] the attributes - and adding a new property should involve less code changes [to avoid missing some changes].
+      - Have the attributes as class variables.
+      - Getters/setters for each attributes.
+      - List of attribute values as a separate property - all methods dependent on all [or some] attributes should be using this new property - here's where iterator
+        comes into picture.
+      - This approach is typically known array/list backed properties.
+
+  * Facade
+
+  * Flyweight
+
+  * Proxy
+
+  * Memento
+
+  * State
+
+  * Strategy
+
+  * Template Method
+
+  * Visitor

@@ -141,6 +141,11 @@ class CopyStep < Step
 end
 
 #################################################
+class RenameStep < Step
+  # this shall be a demonstration of Command pattern with invoke/undo/redo - deleted files can't have undo
+end
+
+#################################################
 class SupportedCombiners
   LINEAR = "Linear"
 end
