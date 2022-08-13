@@ -55,4 +55,5 @@
     - Boyer Moore algorithm - GNU grep
     - Dynamic Programming Algo for Levenshtein distance - diff
     - LALR parsing - yacc, bison
+    - Gestalt Pattern Matching - difflib [python]
     - 
