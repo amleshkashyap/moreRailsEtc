@@ -11,6 +11,76 @@
     3. Use .collect if need all fields (eg, Article.collect)
 
 
+### Rails Libraries
+
+#### Rack
+##### Basic
+  * Rack contains a lot of boilerplate code which every web server should ideally have already, instead of having to write them -
+    - Rack::Request - Query parsing, multipart handling
+    - Rack::Response - cookie handling, providing API to returning standard responses [status, header, body]
+    - Rack::ShowExceptions - captures all exceptions
+    - Rack::CommonLogger - apache style logs
+    - Rack::URLMap - redirects to a different rack application, eg, a router
+    - Rack::Deflater - compressing responses with gzip
+    - Rack::Files - for serving static files
+    - Rack::Head - return empty body for head requests
+    - Rack::Lock - serialize requests using mutex (sets env["rack.multithread"] = false by default)
+    - Rack::Runtime - includes response header which contains the time taken to serve the request (x-runtime)
+    - Rack::ConditionalGet - returning not modified responses when it hasn't changed
+    - ContentType, ContentLength and Logger
+    - Rack::Recursive - for internal redirects
+    - Rack::TempfileReaper - removing temp files created during a request
+    - [Official Doc](https://github.com/rack/rack#available-middleware-shipped-with-rack)
+  * Other features -
+    - Possibility to run several web apps inside a single server - how?
+    - Easy testing
+    - Adding any other middleware as required
+    - Supported by many servers - puma, phusion passenger, etc -
+
+##### Rails On Rack
+  * Rack compliant web servers need to use Rails.application object to serve a rails application.
+  * Rack applications can be inserted into a rails application as either a middleware or as part of a route [see match/mount] as well.
+  * bin/rails server creates Rack::Server object and starts the web server [rails server inherits from Rack::Server]
+    - We usually start rails server using `rails s` or `rails server` command.
+    - We can add `run Rails.application` to config.ru and start the server using `rackup config.ru` as well.
+    - [rails s vs rackup](https://stackoverflow.com/a/9383491)
+  * Middlewares are loaded once and one needs to restart the server for changes to reflect.
+  * ActionDispatch
+    - Middleware stack can be configured using `config.middleware`, with methods like `use`, `insert_before` and `insert_after`
+    - These are similar to rack middlewares, and added by rails (optimized for rails) - has similar features ([list](https://guides.rubyonrails.org/rails_on_rack.html#internal-middleware-stack))
+
+#### ActiveRecord
+##### Basic
+  * There are 2 types of ActiveRecord objects, one is present in the DB and another which is not in DB (eg, created via new method or a destroyed object. check via `new_record?` method)
+  * Basic CRUD operations with naming conventions.
+  * [Official Doc](https://guides.rubyonrails.org/active_record_basics.html)
+  * Validations - create, save and update methods use validation before committing to the DB
+    - bang versions of `create`, `save`, `update` will raise an exception at failure.
+    - all other methods (eg, `insert`, `insert_all`, `upsert`, `update_all`, `update_attributes` will skip validation.
+    - however, a `valid?` and `invalid?` method is provided to check if an object is valid if above methods have to be used.
+    - inbuilt validations -
+    - errors - `valid?` and `invalid?` methods attaches `errors` (ActiveRecord::Error type) object to the ActiveRecord object.
+      - it provides an API to find out all errors for a record for specific attributes etc.
+    - [Official Doc](https://guides.rubyonrails.org/active_record_validations.html)
+  * Callbacks -
+    - These methods trigger callbacks - `create`, `destroy`, `destroy_all`, `destroy_by`, `save`, `update`, `update_attribute`, `valid?`, `toggle`, `touch`
+    - `after_find` callback triggered for these methods - `all`, `first`, `find`, `find_by`, `find_by_*`, `find_by_sql`, `last`
+    - Other methods don't trigger callbacks, eg, `insert`, `delete_all`, `delete_by`, `update_all`, `upsert`, etc.
+    - For DB transactions - `after_commit` and `after_rollback` wait for the actual DB commit/rollback to happen.
+      - These are not part of the actual transaction. `save` and `destroy` methods are always wrapped inside a transaction.
+      - [More on ActiveRecord transactions](https://api.rubyonrails.org/classes/ActiveRecord/Transactions/ClassMethods.html)
+      - When using aliases for these method, the last defined method will be executed.
+    - [Official Doc](https://guides.rubyonrails.org/active_record_callbacks.html)
+  * Migrations -
+
+##### Associations
+  * Associations are there to simplify some operations for related models.
+    - Eg, when creating a model object which should have a key to another model object becomes easier. Deleting related model objects are simplified.
+    -
+
+#####
+
+
 ### Application Performance
   * [Perf Optimization](https://pawelurbanek.com/optimize-rails-performance)
   * [N+1 Query Problem](https://dev.to/junko911/rails-n-1-queries-and-eager-loading-10eh)
