@@ -81,17 +81,17 @@
   * Methods based on returned response type -
     - `ActiveRecord::Relation` - also referred as `collection` or `relation` => ex, `where`, `group`, `order`, `select`, `joins`, `includes`
       - These don't contain an actual resulting row from the DB, but a query which can be fired to get the resulting rows.
-    - `ActiveRecord::Object` - also referred as objects, and containing an actual row from the DB => ex, `find`, `first`, `take`, `last`, `find_by` 
+    - `ActiveRecord::Object` - also referred as object, and containing an actual row from the DB => ex, `find`, `first`, `take`, `last`, `find_by` 
       - This type of object is also created when a new record has to be inserted to the DB - `new_record?` method is used to differentiate them.
     - `ActiveRecord::Result` - `select_all` - rarely used. Doesn't provide attribute methods after converting to `Array` using `to_a` (provides a regular ruby `Hash`)
     - `Array` of `ActiveRecord::Object` - `find_by_sql`
     - `Array` - `pluck`
 
   * Method Chaining - Multiple methods can be used one after the other.
-    - All previous methods should return an `ActiveRecord::Relation` type - methods like `find` (returns `ActiveRecord::Object`) or `pluck` (returns `Array`) fire an actual query.
+    - All previous methods should return a `collection` - methods like `find` (returns `ActiveRecord::Object`) or `pluck` (returns `Array`) fire an actual query.
     - This is to simplify building complex queries before they're actually fired to get the results from the DB.
 
-  * Scope - When building a query to be fired to DB (`ActiveRecord::Relation`), we often have a set of (chained) methods - this can be considered a scope.
+  * Scope - When building a query to be fired to DB (`collection`), we often have a set of (chained) methods - this can be considered a scope.
     - Some scopes can be defined during model definition if we already know what queries are going to be frequently fired. Scopes can be chained as well.
     - There are some overriding methods provided by `ActiveRecord` which allows one to modify a given scope (including complete elimination of certain methods).
 
@@ -103,13 +103,13 @@
 
   * Common Query Methods -
     - `find`
-      - `Model.find(10)` => `select * from models where (models.id = 10`) limit 1
+      - `Model.find(10)` => `select * from models where (models.id = 10) limit 1`
 
     - `take`
       - `Model.take` => `select * from models limit 1`
       - `Model.take(3)` => `select * from models limit 3`
 
-    - `first` - By default, finds the first record ordered by primary key. For an ordered collection (type - `ActiveRecord::Relation`), ordering is performed using the specified key.
+    - `first` - By default, finds the first record ordered by primary key. For an ordered `collection`, ordering is performed using the specified key.
       - `Model.first` => `select * from models order by models.id asc limit 1`
       - `Model.first(3)` => `select * from models order by models.id asc limit 3`
       - `Model.order(:some_attr).first` => `select * from models order by model.some_attr asc limit 1`
@@ -126,22 +126,27 @@
     - `where` - Conditions can be specified as a string, array or hash.
        - String based conditions which contain variables may be vulnerable to SQL injection as `ActiveRecord` uses the string as is.
        - `Model.where("some_attr = #{some_var} and another_attr = #{another_var}")` => `select * from models where (some_attr = <value1> and another_attr = <value2>)`
+       <br/>
 
        - Array based conditions are safer, except when using `like` wildcards (%, _) - array arguments are escaped by `ActiveRecord`.
        - `Model.where("some_attr = ? and another_attr = ?", some_var, another_var)`
        - Another way to write array based conditions for more clarity - `Model.where("some_attr = :var1 and another_attr = :var2", { var1: some_var, var2: another_var })`
        - Proper use of `like` based condtions - `Model.where("some_attr like ?", Model.sanitize_sql_like(some_var) + %)`
+       <br/>
 
        - Hash based conditions are provided for clarity purpose.
        - `Model.where(some_attr: 'some_value')` or `Model.where('some_attr' => 'some_value')` => `select * from models where (models.some_attr = 'some_value')`
        - `Model.where(created_at: (Time.now.midnight - 1.day)..Time.now.midnight)` => `select * from models where (models.created_at between '2022-01-01 00:00:00' and '2022-01-02 00:00:00')`
        - `Model.where(some_attr: [1, 2, 4])` => `select * from models where (models.some_attr in (1,2,4))`
+       <br/>
 
        - `Model.where.not(some_attr: [1, 2, 4])` => `select * from models where (models.some_attr not in (1,2,4))`
        - For above queries, if `nil` is passed as the value to match, then all records which have a non-nil [SQL: NULL] value for that attribute will be returned.
+       <br/>
 
        - `Model.where(some_attr: 'some_value').or(Model.where(another_attr: [1, 2, 3]))` => `select * from models where (models.some_attr = 'some_value' or models.another_attr in (1,2,3))`
        - Above is similar to - `Model.where("some_attr = 'some_value' or another_attr in (1,2,3)")` => `select * from models where (some_attr = 'some_value' or another_attr in (1,2,3))`
+       <br/>
 
        - `Model.where(some_attr: 'some_value').where(another_attr: [1, 2, 3])` => `select * from models where (models.some_attr = 'some_value' and models.another_attr in (1,2,3))`
        - Above can be also written as - `Model.where(some_attr: 'some_value').and(Model.where(another_attr: [1, 2, 3]))`
@@ -173,17 +178,20 @@
     - `pluck` - It is a faster alternative for converting the columns returned from `select` query into a ruby `Array` (skipping `ActiveRecord` object creation).
       - A DB query is performed as soon as `pluck` is encountered, and result is a ruby `Array`, so adding any subsequent clauses will result in error - they've to be added beforehand.
       - Works with multiple tables as well (`joins` and `includes`).
-      - When used with `includes`, it performs eager loading, even though the result with contains columns from first model only (unlike `select`, which doesn't work with `includes`)
+      - When used with `includes`, it performs eager loading, even though the result will contain columns from first model only (unlike `select`, which doesn't work with `includes`)
 
   * Locking - This is for ensuring atomic updates, prevents race conditions.
     - Optimistic Locking - Allows multiple users to make edits and assumes that the conflicts caused will be minimal (hence transactions won't have to be rolled back). `ActiveRecord::StaleObjectError`
       is thrown if another process (ie, user) has made changes to the record since it was opened. Optimistic locking can be enabled by adding the column `lock_version` - if an update request is
       made with a `lock_version` value lower than what is present in the DB, then the aforementioned exception is raised - the exception can be rescued and transaction can be rolled back or merged, etc.
+
     - Pessimistic Locking - Uses the locking mechanism provided by the underlying database - obtains an exclusive lock on the selected row, when used. Lock operations are wrapped inside a
       transaction to avoid deadlocks. `lock` can accept raw SQL arguments for different kinds of locking, eg, `LOCK IN SHARE MODE` to allow reads.
+
     - `lock` - Simple pessimistic locking of a row, user has to wrap it in transaction to prevent deadlocks.
       - `Model.lock.first`
       - `Model.transaction do; v_mod = Model.lock.first; v_mod.some_attr = 'some new value'; v_mod.save; end`
+      <br/>
     - `with_lock` - Pessimistic locking along with starting a transaction.
       - `v_mod = Model.first; v_mod.with_lock do; v_mod.some_attr = 'some new value'; v_mod.save; end`
 
@@ -221,15 +229,18 @@
       - `Model.includes(:another_model, :third_model)`
       - `Model.includes(:another_model, { third_model: [ :fourth_model, :fifth_model ] }).find(1)` => Loads one model object, associated `another_model` objects, `third_model` objects corresponding to
         `another_model` object, and `fourth_model` and `fifth_model` objects associated with `third_model` object.
+      <br/>
 
       - We can add a where condition to the eager loaded association, and that loads the objects using the left inner join operation (instead of multiple queries).
       - `Model.includes(:another_model).where(another_model: { some_attr: 'some_value' })` =>
         `select models.id as t0_r0, models.attr1 as t0_r1, ..., another_mod.id as t1_r0, another_mod.attr2 as t1_r1, ..., from models left outer join another_models another_mod on another_mod.id
           = models.another_model_id where (another_mod.some_attr = 'some_value')`
+      <br/>
 
       - We can pass a string based query as well in the where clause, but then `references` has to be used at the end.
       - `Model.includes(:another_model).where("another_models.some_attr = 'some_value'").references(:another_model)`
       - NOTE: use of 's' for string vs hash queries when firing queries which reference tables. Table names have 's' at the end and so should the raw SQL queries (when using a table name).
+      <br/>
 
       - Above operation can be done using `joins` query as well, but it performs an inner join which can return empty results when given conditions don't match - left inner join will always return
         at least the base table (ie, `models`).
@@ -281,6 +292,7 @@
     - `delegate` -
     - `delegate_missing_to` -
     - `redefine_method` -
+    <br/>
 
     - `class_attribute` -
     - `cattr_accessor` -
@@ -299,8 +311,10 @@
     - `at`, `from`, `to`, `first`, `last` -
     - `pluralize`, `singularize`, `camelize`, `underscore`, `titelize`, `dasherize`, `demodulize`, `deconstantize`, `parameterize`, `tableize`, `classify`, `constantize`, `humanize`, `foreign_key`
     - `to_date`, `to_time`, `to_datetime`
+    <br/>
 
     - `multiline?` -
+    <br/>
 
     - `starts_with?` and `ends_with?` -
 
@@ -308,10 +322,12 @@
     - `bytes`, `kilobytes`, ..., `exabytes` -
     - `seconds`, 'minutes`, 'hours`, `days`, `weeks`, `fortnights` -
     - `to_fs`
+    <br/>
 
     - `multiple_of?` -
     - `ordinal` and `ordinalize` -
     - `months` and `years` -
+    <br/>
 
     - `to_s` -
 
@@ -326,6 +342,7 @@
     - `deep_dup` -
     - `in_groups_of` and `in_groups` -
     - `split` -
+    <br/>
 
     - `to_s` -
     - `===` and `include?` -
@@ -363,12 +380,14 @@
     - `advance` and `change` - takes keys like `weeks`, `months`, etc
     - `beginning_of_minute`, `beginning_of_hour`, `beginning_of_day`, `end_of_minute`, `end_of_hour`, `end_of_day` - returns Time/DateTime types, uses the set timezone.
     - `ago` and `since` - returns Time/DateTime, takes arguments in seconds.
+    <br/>
 
     - DateTime is subclass of Date so all methods are inherited, but the return values are DateTime (format - DD:MM:YY HH:MM:SS TZ). DateTime doesn't understand DST.
     - `beginning_of_hour` and `end_of_hour` are only implemented for DateTime (not for Date).
     - `seconds_since_midnight` -
     - `utc` and `utc?` -
     - `advance` and `change` - now they work with extra arguments.
+    <br/>
 
     - Time takes DST into account. Return type is Time (for `since` and `ago`, returns type maybe DateTime). `:usec` option is supported in `change` method.
     - `all_day`, `all_week`, `all_month`, `all_quarter` and `all_year` - returns a range of Time.
