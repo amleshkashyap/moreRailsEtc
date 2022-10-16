@@ -1,13 +1,15 @@
 from singleton import Singleton
 from storage import Storage
 from server import Server
-from client import Client
+from client import Client, IPCClient
 from process import Process
 from orders import Orders
+from multiprocs import MultiProcessHelper
 
 class SystemManager(Singleton):
     def __init__(self):
         self.orders = Orders()
+        self.multiproc_helper = MultiProcessHelper()
         self.systems = AllSystems()
         self.storages = AllStorages()
         self.global_store = self.storages.get_storage(0)
@@ -21,13 +23,16 @@ class SystemManager(Singleton):
         self.processes.reset_state()
 
     def get_new_client_system(self, s_type, servers=[]):
-        return self.systems.add_client_system(s_type, servers, self.orders)
+        return self.systems.add_client_system(s_type, servers, self.orders, None)
+
+    def get_new_communicating_client_system(self, s_type, connection, servers=[]):
+        return self.systems.add_communicating_client_system(s_type, servers, self.orders, connection)
 
     def get_new_system(self, s_type):
-        return self.systems.add_system(s_type, self.orders)
+        return self.systems.add_system(s_type, self.orders, self.multiproc_helper)
 
     def get_system_by_id(self, s_id):
-        return self.systems.get_system[s_id]
+        return self.systems.get_system(s_id)
 
     def get_systems_of_type(self, system_type):
         return self.systems.get_systems_of_type(system_type)
@@ -36,7 +41,7 @@ class SystemManager(Singleton):
         return self.storages.add_storage(storage_type)
 
     def get_storage_by_id(self, storage_id):
-        return self.storages.get_storage[storage_id]
+        return self.storages.get_storage(storage_id)
 
     def get_new_process(self, process_type, system_id):
         return self.processes.add_process(process_type, system_id)
@@ -113,13 +118,15 @@ class AllSystems(Singleton):
         self.all_systems = []
         self.count = -1
 
-    def add_system(self, s_type, orders):
+    def add_system(self, s_type, orders, multiproc_helper):
         self.count += 1
-        if s_type == 'client':
-            system = Client(self.count, s_type, [], orders)
+        if s_type in ['simple_client', 'distributed_client']:
+            system = Client(self.count, s_type, [], orders, None)
+        elif s_type == 'communicating_client':
+            system = IPCClient(self.count, s_type, [], orders, None)
         else:
             leader_id = self.get_last_leader(s_type)
-            system = Server(self.count, s_type, leader_id, orders)
+            system = Server(self.count, s_type, leader_id, orders, multiproc_helper)
             if "_follower" in s_type:
                 leader = self.get_system(leader_id)
                 leader.update_followers(self.count)
@@ -127,9 +134,15 @@ class AllSystems(Singleton):
         self.all_systems.append(system)
         return system
 
-    def add_client_system(self, s_type, servers, orders):
+    def add_client_system(self, s_type, servers, orders, multiproc_helper):
         self.count += 1
-        system = Client(self.count, s_type, servers, orders)
+        system = Client(self.count, s_type, servers, orders, None)
+        self.all_systems.append(system)
+        return system
+
+    def add_communicating_client_system(self, s_type, servers, orders, connection):
+        self.count += 1
+        system = IPCClient(self.count, s_type, servers, orders, connection)
         self.all_systems.append(system)
         return system
 

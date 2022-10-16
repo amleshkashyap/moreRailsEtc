@@ -1,26 +1,26 @@
 from singleton import Singleton
 from lamport_clock import LamportClock, MonotonicClock, Clock
 from storage import Storage, VersionedKey
-from orders import Orders
 
 class Server():
-    def __init__(self, system_id, system_type, leader_id, orders, storage_id=None):
+    def __init__(self, system_id, system_type, leader_id, orders, multiproc_helper, storage_id=None):
         self.is_leader = False
         self.system_type = system_type
         self.system_id = system_id
         self.leader_id = leader_id
         self.follower_ids = []
+        self.multiproc_helper = multiproc_helper
         self.orders = orders
 
         if system_type == 'simple':
-            self.clock = MonotonicClock()
+            self.clock = MonotonicClock(1)
             self.storage = SingletonStorage()
         elif system_type == 'simple_leader':
-            self.clock = MonotonicClock()
+            self.clock = MonotonicClock(1)
             self.storage = Storage(system_id)
             self.is_leader = True
         elif system_type == 'simple_follower':
-            self.clock = Clock()
+            self.clock = Clock(1)
             self.storage = None
 
         elif system_type == 'distributed':
@@ -31,16 +31,16 @@ class Server():
             self.storage = Storage(system_id)
             self.is_leader = True
         elif system_type == 'distributed_follower':
-            self.clock = Clock()
+            self.clock = Clock(1)
             self.storage = None
         else:
             raise RuntimeError(f"Invalid Server Type: {system_type}")
 
-        print(f"Created System Of Type {system_type}, With ID {self.system_id}")
+        # print(f"Created System Of Type {system_type}, With ID {self.system_id}")
         self.orders.add_order(self.clock.get_latest_time(), system_id, "created")
         # python has this problem of considering 0 as False
-        if self.leader_id != None:
-            print(f"    Lead Server Is: {self.leader_id}")
+        # if self.leader_id != None:
+            # print(f"    Lead Server Is: {self.leader_id}")
         return
 
     def update_followers(self, follower_id):
@@ -59,10 +59,12 @@ class Server():
         if self.system_type == 'simple':
             write_at = self.clock.tick()
             self.storage.put(VersionedKey(key, write_at), value)
+            self.orders.add_order(self.clock.get_latest_time(), self.system_id, f"wrote_{key}")
 
         elif self.system_type == 'simple_leader':
             write_at = self.clock.tick()
             self.storage.put(VersionedKey(key, write_at), value)
+            self.orders.add_order(self.clock.get_latest_time(), self.system_id, f"wrote_{key}")
             # AllServers.update_follower_storage(self.system_id)
 
         elif self.system_type == 'simple_follower':
@@ -72,12 +74,12 @@ class Server():
         elif self.system_type == 'distributed':
             write_at = self.clock.tick(timestamp)
             self.storage.put(VersionedKey(key, write_at), value)
-            self.orders.add_order(self.clock.get_latest_time(), self.system_id, f"written_{key}")
+            self.orders.add_order(self.clock.get_latest_time(), self.system_id, f"wrote_{key}")
 
         elif self.system_type == 'distributed_leader':
             write_at = self.clock.tick(timestamp)
             self.storage.put(VersionedKey(key, write_at), value)
-            self.orders.add_order(self.clock.get_latest_time(), self.system_id, f"written_{key}")
+            self.orders.add_order(self.clock.get_latest_time(), self.system_id, f"wrote_{key}")
             # AllServers.update_follower_storage(self.system_id)
 
         elif self.system_type == 'distributed_follower':

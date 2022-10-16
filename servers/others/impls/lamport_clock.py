@@ -21,8 +21,8 @@ class LamportClock():
 
 
 class MonotonicClock(LamportClock):
-    def __init__(self):
-        super().__init__(0)
+    def __init__(self, timestamp):
+        super().__init__(timestamp)
         return
 
     def tick(self):
@@ -30,8 +30,8 @@ class MonotonicClock(LamportClock):
         return self.latest_time
 
 class Clock(LamportClock):
-    def __init__(self):
-        super().__init__(0)
+    def __init__(self, timestamp):
+        super().__init__(timestamp)
         return
 
     def tick(self):
