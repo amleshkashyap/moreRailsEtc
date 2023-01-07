@@ -1,8 +1,8 @@
-### Generic Dumping Ground for the Infinite Things
+## Generic Dumping Ground for the Infinite Things
 
-#### Distributed Computing Concepts [Needs Cleanup]
+## Distributed Computing Concepts [Needs Cleanup]
 
-##### Problems with local and global clocks -
+### Problems with local and global clocks -
   * Source - https://martinfowler.com/articles/patterns-of-distributed-systems/time-bound-lease.html#wall-clock-not-monotonic
   * Computers have 2 mechanisms to represent time -
     - Wall clock time - measured using a crystal oscillator [a mechanical system with potential to go wrong]. If crystals oscillate fast or slow, then the wall clock time can go ahead/behind the
@@ -13,7 +13,7 @@
   * However, above can't be used to assert the accurate ordering of timestamps across servers - as discussed above, since timestamp values can be approximations within a server, there's no way
     to order the timestamps with 100% accuracy across servers. This creates a need for having a global clock for distributed systems to achieve total ordering, if required.
 
-##### Consistency Models
+### Consistency Models
   * Source - https://jepsen.io/consistency
 
   * Concepts
@@ -73,7 +73,7 @@
                 other process might've changed it - but the operational sequence is guaranteed.
               - Read Your Writes
 
-##### More Concepts
+### More Concepts
   * Client, Server - Server consists of a leader and its followers (internally, can be one or many clusters). Client is the one making requests to the server.
 
   * Effects Of Serializability And Linearizability
@@ -132,7 +132,7 @@
     - Leader tracks the timeouts of leases [even though followers also hold the leases - this is the Consistent Core].
 
 
-##### Distributed Algorithms
+### Distributed Algorithms
   * Lamport's Clock
     - Source - https://martinfowler.com/articles/patterns-of-distributed-systems/lamport-clock.html
     - Partially Ordered Sets - (P, <=, <) - A poset consists of a set P and a binary relation (eg, <= for non-strict, and < for strict) such that for certain pair of elements in the set, one
@@ -152,7 +152,76 @@
   * Election Algorithm
 
 
-#### Modern Usage of Algorithms -
+### Distributed Lock Manager
+  * A DLM runs in every machine of a cluster with an identical copy of lock database [representing the complete cluster].
+    - Used for file locking and coordinating disk accesses.
+    - Deadlock detection is required to prevent programming errors which can lead to deadlock.
+
+  * A sample hierarchy of resources [which need different kinds of locking] -
+    - Database
+    - Table
+    - Record
+    - Field
+
+  * Example locking levels -
+    - Null - an interest in resource, no blocking.
+    - Concurrent Read - read the resource without updating it, allowing others to read and update - prevents threads from gaining an exclusive lock on the resource though.
+    - Concurrent Write - read and update the resource, allowing others to read and update - but no exclusive access allowed for any thread. Who wins though?
+    - Protected Read - read the resource without updating it, but don't allow others to update it [and no exclusive lock of course].
+    - Protected Write - read/update the resource, but don't allow others to update it.
+    - Exclusive - read/update the resource and prevent anyone else from accessing it.
+
+  * Examples - chubby, zookeeper, etcd, redis (redlock algorithm), consul, single system images use DLM as well.
+
+  * Redlock Algorithm -
+    - This algorithm is meant for any system which is served by multiple redis [no sharding, just replication].
+    - Redis is used ubiquitously as a lock provider - this is specifically designed to provide a robust locking mechanism for distributed systems where availability isn't guaranteed.
+    - 
+
+### Concurrency Control Techniques
+  * Who needs it -
+    - Databases
+    - Distributed Systems
+    - 
+
+  * Goals - serializability, recoverability, distributed serializability, distributed commitment ordering, distributed recoverability, replication
+
+  * Two phase locking
+    - Guarantees serializability.
+    - Usual phases -
+      - Expanding phase - locks are acquired and not released.
+      - Shrinking phase - locks are released but not acquired.
+    - Expanding phase have the potential to lead to deadlocks.
+    - Conservative 2PL
+      - a transaction isn't started unless all locks are acquired - this prevents deadlocks.
+    - Strict 2PL
+      - write locks can be released only after transaction has ended [commit/abort].
+      - read locks can be released during shrinking phase.
+      - B-Tree based DB implementations have performance problems with this approach.
+
+    - Strong Strict 2PL
+      - read and write locks can be released only after transaction has ended.
+      - Used since 1970s.
+
+  * Serialization graph
+  * Timestamp Ordering
+  * Commitment Ordering
+  * MVCC
+  * Index Concurrency Control
+  * Deferred Update
+
+  * Read copy update
+    - Avoid using locks. Beneficial when fast reads a crucial, at the cost of extra space. Updates can be time consuming.
+    - At an update, the thread has to -
+      - create a new node (LL) with the old data and a reference to it
+      - modify the data
+      - update the global pointer to this node
+      - wait till OS signals that no thread is reading from the old node [as they'd have the older reference before global pointer was modified] - synchronize\_rcu() system call
+      - deallocate the old node
+    - RCU APIs were used approx 9000 times in Linux kernel (2014).
+
+
+## Modern Usage of Algorithms -
   * Kubernetes Scheduler -
     - Filtering of nodes according to user specification
     - Scoring of matching nodes after the above filtering
@@ -162,7 +231,7 @@
       1. When 2 or more threads/processes are ready to communicate, then they'll be ready simultaneously.
       2. Ousterhouse matrix - rows are time slices and columns are processors - threads/processes for each job are in one row (distributed across processors).
 
-#### Some Algorithms in Practice
+### Some Algorithms in Practice
   * Source - https://cstheory.stackexchange.com/questions/19759/core-algorithms-deployed/19773#19773
   * Linux - 
     - Linked List and variants
