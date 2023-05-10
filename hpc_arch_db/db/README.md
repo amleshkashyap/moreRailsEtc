@@ -1,7 +1,7 @@
 # General
   * [DB Engines](https://db-engines.com/en/ranking)
 
-## Types of DB [source](https://www.mongodb.com/databases/types)
+## Types of DB [Source](https://www.mongodb.com/databases/types)
   * Hierarchical Databases [since 60s] - Tree like structure, high performance. Eg, Windows Registry
   * Relational Databases [since 70s] - SQL, AWS Aurora, AWS RDS, AWS Redshift.
   * Non-relational Databases -
