@@ -1,4 +1,19 @@
 ### Some OS Topics
+
+#### Trivia
+  * There are no easy error returns in an operating system. There is a need to recover, clean up the mess, and continue working. That is not an easy problem to solve. Applications, on the other
+    hand, can abort, give up, and leave the mess to the OS to clean up. [Someone On Quora]
+
+  * If you want to run exactly one program on one processor core using one console mode, one simple filesystem and one simple ethernet network stack, you’re looking at a project well within the reach
+    of <most students spending quite sometime> — assuming you leverage UEFI. Without UEFI, you’re looking at something <fewer students spending more time>.
+    The complexity comes in when you want to start relaxing those restrictions. If you download the linux source you’ll see most of the code is device drivers: dozens (or hundreds) of graphics cards,
+    network cards, exotic communication hardware, hard drives, etc. Each of these can have their own documented (or undocumented) communication protocols, error messages, initialization routines, etc.
+    Next, there are huge piles of code dedicated to making shared-memory parallelism work. Want to run more than one program at a time? (Why would you ever want to do that?) Well, how do they play
+    nice with each other? How do you manage to interrupt a running program, save off necessary state, then transfer control to a different program in a manner that appears seamless to the user?
+    And once you’ve gotten things tottering along for several mixes of hardware and software, you now need to be able to manage the flood of new devices that arrive week in and week out without
+    breaking backwards compatibility for your 1985 version of Tetris. For simple, straightforward, documented hardware, any individual component isn’t that difficult. Getting ten thousand of those
+    components to play well with each other is a corporate-sized undertaking. [Someone On Quora]
+
 #### Basics
   * Find process tree (and tree for one pid) - `pstree -p` (`pstree -s -p <pid>`)
   * Find the information stored by OS for a process - `/proc/<pid>/`
