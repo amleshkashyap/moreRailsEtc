@@ -1,3 +1,4 @@
+# cleanup needed
 class Trie(object):
     import string
 
@@ -120,9 +121,6 @@ class TrieWithDict(object):
 
 class WordDictionary(object):
     def __init__(self):
-        # self.children = {}
-        # self.isLeaf = False
-        # self.hasLeafChild = False
         self.children = {"children": {}, "leaf": False}
 
 
@@ -131,22 +129,6 @@ class WordDictionary(object):
         :type word: str
         :rtype: None
         """
-        # char = word[0].lower()
-        # if char == ".":
-        #     if len(word) == 1:
-        #         self.isLeaf = True
-        #     return
-        # if char not in self.children.keys():
-        #     node = WordDictionary()
-        #     self.children[char] = node
-        # else:
-        #     node = self.children[char]
-
-        # if len(word) == 1:
-        #     node.isLeaf = True
-        #     self.hasLeafChild = True
-        #     return
-        # node.addWord(word[1:])
         root = self.children["children"]
         count = 0
         for char in word.lower():
@@ -162,20 +144,6 @@ class WordDictionary(object):
         :type word: str
         :rtype: bool
         """
-        # char = word[0].lower()
-        # if char in self.children.keys():
-        #     root = self.children[char]
-        #     if len(word) == 1:
-        #         return root.isLeaf
-        #     return root.search(word[1:])
-        # elif char == ".":
-        #     if len(word) == 1:
-        #         return self.hasLeafChild
-        #     for c, node in self.children.items():
-        #         if node.search(word[1:]) == True:
-        #             return True
-        # return False
-        # print(word, self.children)
         roots = [self.children["children"]]
         count = 0
         for char in word.lower():
@@ -204,13 +172,6 @@ class WordDictionary(object):
 
         return False
 
-
-
-
-# Your WordDictionary object will be instantiated and called as such:
-# obj = WordDictionary()
-# obj.addWord(word)
-# param_2 = obj.search(word)
 
 class WordDictionary(object):
 
@@ -276,25 +237,6 @@ class WordDictionary(object):
         
 
 
-# Your WordDictionary object will be instantiated and called as such:
-# obj = WordDictionary()
-# obj.addWord(word)
-# param_2 = obj.search(word)
-
-
-
-# Given an m x n board of characters and a list of strings words, return all words on the board.
-
-# Each word must be constructed from letters of sequentially adjacent cells, where adjacent cells are horizontally or vertically neighboring. The same letter cell may not be used more than once in a word.
-
-# m == board.length
-# n == board[i].length
-# 1 <= m, n <= 12
-# board[i][j] is a lowercase English letter.
-# 1 <= words.length <= 3 * 104
-# 1 <= words[i].length <= 10
-# words[i] consists of lowercase English letters.
-# All the strings of words are unique.
 
 # Optimisations
 #   - If words to be searched < 10, then it doesn't make sense to find out all the possible words

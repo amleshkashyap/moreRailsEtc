@@ -1,4 +1,5 @@
 ignore/
 impls/algorithms/testcases/
 impls/algorithms/dp/
-impls/data_structures/advanced/
+impls/algorithms/pending/
+impls/data_structures/pending/
