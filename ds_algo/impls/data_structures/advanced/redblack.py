@@ -3,6 +3,7 @@ from util import Util
 # Red-Black Trees - DB Transactions - Random Operations (Search/Delete/Add) - 3 Pointers + Color Bit
 # AVL Trees - Multiset, Multimap, Map, Set - Frequent Searches - 2 Pointers + Balance Factor
 # Splay Trees - Cache, Garbage Collection - Same Element Accessed Frequently - 2 Pointers
+# Treaps - Ordered Sets - Randomized Balanced BST
 
 # Following the definition from Cormen, RB Tree has 5 properties
 #  1. Nodes are either red or black

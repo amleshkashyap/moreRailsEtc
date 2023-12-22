@@ -18,31 +18,31 @@
       - If the inserted node had a red parent, then property (4) is violated - this can lead to a few scenarios discussed below.
 
   * BST Deletion - BST deletion scenarios form the basis for generating RBT deletion scenarios -
-    - Set-0 - minimal ops
+    - Set-0 - when the node being deleted has no children - minimal ops
       - In all cases, node being deleted is (n). Also, its parent is (z)
-      - C-1 - Delete the root node with no children - tree becomes empty
-      - C-2 - Delete a right/left child of root node with no children - make the right/left child of root as nil
-      - C-3 - Delete a right/left leaf node - make the right/left child of (z) as nil
+      - E-1 - Delete the root node with no children - tree becomes empty
+      - E-2 - Delete a right/left child of root node with no children - make the right/left child of root as nil
+      - E-3 - Delete a right/left leaf node - make the right/left child of (z) as nil
 
     - Set-1 - when the node being deleted has one child - 1 transplant only
       - In all cases, node being deleted is (n) and replaced by its only child (x). Also, (n)'s parent is (z)
-      - C-1 - Delete the root node with one child - make (x) as root
-      - C-2 - Delete a child of root node (z) with one child - make (x) as (z)'s right/left child
-      - C-3 - Delete any other node with just one child - make (x) as the right/left child of (z)
+      - E-1 - Delete the root node with one child - make (x) as root
+      - E-2 - Delete a child of root node (z) with one child - make (x) as (z)'s right/left child
+      - E-3 - Delete any other node with just one child - make (x) as the right/left child of (z)
 
     - Set-2 - when the node being deleted (n) has 2 children, but it's right child (y) has no left child - 1 transplant + minimal ops
       - In all cases, (y) replaces (n). (y) may have a right child (x). Also, (y)'s parent is (z) == (n)
-      - C-1 - If (n) was root, then replace (n) by (y)
-      - C-2 - If (n) was a child node of root, then replace (n) by (y)
-      - C-3 - Even otherwise, replace (n) by (y)
+      - E-1 - If (n) was root, then replace (n) by (y)
+      - E-2 - If (n) was a child node of root, then replace (n) by (y)
+      - E-3 - Even otherwise, replace (n) by (y)
 
     - Set-3 - when the node being deleted (n) has 2 children, and it's right child (r) has a left child - upto 2 transplants + minimal ops
       - Find the min\_node (y) in the subtree (r) - (y) can't have a left child - but may have a right child (x).
       - If (x) exists, replace (y) by (x).
       - In all cases, (y) replaces (n). Also, (y)'s parent is (z) != (n) [however, (z) maybe (r) but it's irrelevant]
-      - C-1 - If (n) was root, replace (n) by (y)
-      - C-2 - If (n) was a child node of root, replace (n) by (y)
-      - C-3 - Even otherwise, replace (n) by (y)
+      - E-1 - If (n) was root, replace (n) by (y)
+      - E-2 - If (n) was a child node of root, replace (n) by (y)
+      - E-3 - Even otherwise, replace (n) by (y)
 
 
   * Deletion
@@ -96,21 +96,12 @@
       - black, black,   black
       - black, black,   red    - fix immediately
 
-    - Totally, it appears that 14 scenarios exist (and then x 3 for the 3 scenarios in basic BST deletion). However, RB-Set-1, RB-Set-2 and
+    - Totally, it appears that 14 scenarios exist (and x 3 testcases for the 3 E's in basic BST deletion). However, RB-Set-1, RB-Set-2 and
       RB-Set-3 have the same scenarios. Also, half of them can be immediately fixed - in cases when (x) is red, making it black fixes -
       - Violation of property (5) by providing the ancestors with the lost black node
       - All the violations of property (4) above (in C-3) are fixed too by eliminating red-red parent-child
 
-    - Scenarios which remain unfixed are -
-      - RB-Set-0 - (z), (o) - black, (x) - black
-        - red,   black,  black
-        - black, black,  black
-
-      - RB-Set-1, RB-Set-2, RB-Set-3 - (z), (o) - black, (x) - black
-        - red,   black,  black
-        - black, black,  black
-
-    - Both the above are same, thus leaving with only 2 scenarios to solve for - (z), (o) - black, (x) - black
+    - Only 2 cases remain which are the same as RB-Set-0 - thus leaving with only 2 scenarios to solve for - (z), (o) - black, (x) - black
       - [1] red,   black,   black
       - [2] black, black,   black
 
@@ -145,7 +136,6 @@
 ### Deletion
   * Covered in CLRS, there are 4 actual scenarios that show up after showing that there are only 2 scenarios that violate red-black
     properties after performing a basic BST deletion on the RBTree, and coloring (x) as black.
-   - (z) - earlier, it was a parent of (o), but now a parent of (x)
    - (w) - earlier, it was a sibling of (o), but now a sibling of (x)
    - (z) - earlier, it was a parent of (o), but now a parent of (x) - if (w) is red, (z) must've been black.
 
@@ -160,12 +150,6 @@
     - The fixup algorithm will run only for a non-root, black (x)
     - Its goal is to move a black color to ancestors [upto the root], so that all simple paths from the root have 1 less black node -
       it doesn't try to replenish the lost black node within the subtree except for one case (Case-4).
-    - Handling T.nil for (x) and (w) -
-      - Since (o) was black, (z) had at least 1 black node (2 if (x) existed) in its left subtree (towards (o)) - hence, (w) must exist.
-      - At the end of Case-1, (w) becomes it's own older left child, which might've been T.nil
-      - At the end of Case-2, (w) is not required immediately and hence it being T.nil is irrelevant - it can be in subsequent steps.
-      - At the end of Case-3, (w) is definitely not T.nil as it is it's own left red node (which couldn't be T.nil).
-      - At the end of Case-4, (w) being T.nil is irrelevant.
     - The only scenario when it can replenish the lost black node is when the sibling tree of (x) had excessive red nodes which could be
       converted to black along with a rotation. Case-4 provides that red right child with a black parent in the sibling tree, wherein
       a left rotation and recoloring of the rotated node to black leads to restoring of properties.
@@ -176,4 +160,18 @@
     - Case-3 can be converted to Case-4 in O(1) time - hence Case-3 and Case-4 are fastest.
     - Case-1 can go to either Case-2, Case-3 or Case-4.
     - Case-2 has the potential for worst case complexity O(logN) when (z) is black.
+    - Handling T.nil for (x) and (w) -
+      - Since (o) was black, (z) had at least 1 black node (2 if (x) existed) in its left subtree (towards (o)) - hence, (w) must exist.
+      - At the end of Case-1, (w) becomes it's own older left child, which may've been T.nil
+      - At the end of Case-2, (w) is not required immediately - also, (x) moves further up the tree, thus increasing the black nodes in
+        its subtrees, and hence, (w) will never be T.nil again.
+      - At the end of Case-3, (w) is definitely not T.nil as it is it's own left red child (which couldn't be T.nil).
+      - At the end of Case-4, (w) being T.nil is irrelevant.
     - Since the fixup moves up the tree, it's complexity is O(logN). BST deletion is O(logN). Rotations and transplants are O(1).
+
+
+## BTree
+  * Search - Search is a generalised version of BST search.
+  * Insertion - Insertion is almost straightforward, goal is to start insertion attempts from root, splitting it first if required,
+    followed by descending down the tree
+  * Deletion
