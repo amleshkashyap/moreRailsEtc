@@ -83,7 +83,7 @@ class RedBlackTree:
             # if inserted node is a right child, perform left rotation on parent to make it a left child - for ease of fixing
             if node == node.parent.right:
                 node = node.parent
-                self.left_rotate(node)
+                Util.left_rotate(node, self)
             # node is a left child with a red parent and black uncle
             #  - parent must be made black to fix (4) - this will add an extra black in the simple path of its ancestors [violates (5)]
             #  - fix the extra black siutation by making the grandparent as red [since it must've been black]
@@ -92,7 +92,7 @@ class RedBlackTree:
             #  - terminate since no violations of (4)/(5) are present
             node.parent.color = 1
             node.parent.parent.color = 0
-            self.right_rotate(node.parent.parent)
+            Util.right_rotate(node.parent.parent, self)
         
         return node
 
@@ -105,66 +105,15 @@ class RedBlackTree:
         else:
             if node == node.parent.left:
                 node = node.parent
-                self.right_rotate(node)
+                Util.right_rotate(node, self)
             node.parent.color = 1
             node.parent.parent.color = 0
-            self.left_rotate(node.parent.parent)
+            Util.left_rotate(node.parent.parent, self)
 
         return node
-
-    # same as BST transplant
-    def transplant(self, node, child_node):
-        if node.parent == self.tnil:
-            self.root = child_node
-        elif node == node.parent.left:
-            node.parent.left = child_node
-        else:
-            node.parent.right = child_node
-
-        child_node.parent = node.parent
-        return
-
-    def search(self, root, value):
-        if root == self.tnil:
-            return False
-
-        if root.value == value:
-            return root
-
-        if value > root.value:
-            return self.search(root.right, value)
-        else:
-            return self.search(root.left, value)
-
-    def min_node(self, node):
-        while(node.left != self.tnil):
-            node = node.left
-        return node
-
-    def left_rotate(self, node):
-        if node == self.tnil:
-            return
-
-        newRoot = node.right
-        node.right = newRoot.left
-        node.right.parent = node
-        newRoot.left = node
-        self.transplant(node, newRoot)
-        node.parent = newRoot
-
-    def right_rotate(self, node):
-        if node == self.tnil:
-            return
-
-        newRoot = node.left
-        node.left = newRoot.right
-        node.left.parent = node
-        newRoot.right = node
-        self.transplant(node, newRoot)
-        node.parent = newRoot
 
     def delete(self, value):
-        node = self.search(self.root, value)
+        node = Util.search(self.root, value, self.tnil)
         if node == False:
             print(f"Given value: {value} not present in tree")
             return self.root
@@ -174,22 +123,22 @@ class RedBlackTree:
 
         if node.left == self.tnil:
             x = node.right
-            self.transplant(node, node.right)
+            Util.transplant(node, node.right, self)
         elif node.right == self.tnil:
             x = node.left
-            self.transplant(node, node.left)
+            Util.transplant(node, node.left, self)
         else:
-            y = self.min_node(node.right)
+            y = Util.min_node(node.right, self.tnil)
             y_color = y.color
             x = y.right
             if y.parent == node:
                 x.parent = y
             else:
-                self.transplant(y, y.right)
+                Util.transplant(y, y.right, self)
                 y.right = node.right
                 y.right.parent = y
 
-            self.transplant(node, y)
+            Util.transplant(node, y, self)
             y.left = node.left
             y.left.parent = y
             y.color = node.color
@@ -215,7 +164,7 @@ class RedBlackTree:
         if w.color == 0:
             w.color = 1
             x.parent.color = 0
-            self.left_rotate(x.parent)
+            Util.left_rotate(x.parent, self)
             w = x.parent.right
 
         if w == self.tnil:
@@ -229,13 +178,13 @@ class RedBlackTree:
         elif w.right.color == 1:
             w.left.color = 1
             w.color = 0
-            self.right_rotate(w)
+            Util.right_rotate(w, self)
             w = x.parent.right
         else:
             w.color = x.parent.color
             x.parent.color = 1
             w.right.color = 1
-            self.left_rotate(x.parent)
+            Util.left_rotate(x.parent, self)
             x = self.root
 
         return x
@@ -247,7 +196,7 @@ class RedBlackTree:
         if w.color == 0:
             w.color = 1
             x.parent.color = 0
-            self.right_rotate(x.parent)
+            Util.right_rotate(x.parent, self)
             w = x.parent.left
 
         if w == self.tnil:
@@ -260,57 +209,16 @@ class RedBlackTree:
         elif w.left.color == 1:
             w.right.color = 1
             w.color = 0
-            self.left_rotate(w)
+            Util.left_rotate(w, self)
             w = x.parent.left
         else:
             w.color = x.parent.color
             x.parent.color = 1
             w.left.color = 1
-            self.right_rotate(x.parent)
+            Util.right_rotate(x.parent, self)
             x = self.root
         
         return x
-
-    def get_height(self, node):
-        if node == self.tnil:
-            return 1
-        lheight = self.get_height(node.left) + 1
-        rheight = self.get_height(node.right) + 1
-        return max(lheight, rheight)
-
-    def is_balanced(self, node):
-        if node == self.tnil:
-            return 1
-
-        lh = self.is_balanced(node.left)
-        if lh == 0:
-            return 0
-
-        rh = self.is_balanced(node.right)
-        if rh == 0:
-            return 0
-
-        if abs(lh - rh) > 1:
-            return 0
-
-        return max(lh, rh) + 1
-
-    def is_printable(self, node):
-        if node == self.tnil:
-            return 1
-
-        lh = self.is_printable(node.left)
-        if lh == 0:
-            return 0
-
-        rh = self.is_printable(node.right)
-        if rh == 0:
-            return 0
-
-        if lh != rh:
-            return 0
-
-        return max(lh, rh) + 1
 
     def constructTreeArray(self):
         if self.size > 0:
@@ -319,9 +227,9 @@ class RedBlackTree:
         self.verticalArray = []
         self.verticalWithColor = []
         self.treeWithColor = []
-        self.height = self.get_height(self.root)
-        self.balanced = False if self.is_balanced(self.root) == 0 else True
-        self.printable = False if self.is_printable(self.root) == 0 else True
+        self.height = Util.get_height(self.root, self.tnil)
+        self.balanced = False if Util.is_balanced(self.root, self.tnil) == 0 else True
+        self.printable = False if Util.is_printable(self.root, self.tnil) == 0 else True
         if self.printable:
             self.get_vertical_array(self.root, 1, self.verticalArray, self.height, self.verticalWithColor)
         else:
@@ -384,40 +292,6 @@ class RedBlackTree:
         self.get_vertical_array_nonbalanced(node.left, level + 1, array, height, with_color)
         self.get_vertical_array_nonbalanced(node.right, level + 1, array, height, with_color)
 
-def insertion_test(rbt, array):
-    for i in array:
-        print(f"Inserting: {i}, root: {rbt.root.value}, rootparent: {rbt.root.parent.value if rbt.root.parent else None}")
-        rbt.insert(i)
-        rbt.size = 0
-        rbt.constructTreeArray()
-        if rbt.height < 8:
-            print("Stored Tree")
-            Util.print_array_as_tree(rbt.treeArray, rbt.treeWithColor)
-            print("")
-            print(f"Vertical Tree: {rbt.verticalArray}")
-        else:
-            print("Vertical Tree Lines")
-            for ar in rbt.verticalArray:
-                print(ar)
-            print("")
-
-
-def deletion_test(rbt, array):
-    for i in array:
-        print(f"Deleting: {i}, root: {rbt.root.value}, rootparent: {rbt.root.parent.value if rbt.root.parent else None}")
-        rbt.delete(i)
-        rbt.size = 0
-        rbt.constructTreeArray()
-        if rbt.height < 8:
-            print("Stored Tree")
-            Util.print_array_as_tree(rbt.treeArray, rbt.treeWithColor)
-            print("")
-            print(f"Vertical Tree: {rbt.verticalArray}")
-        else:
-            print("Vertical Tree Lines")
-            for ar in rbt.verticalArray:
-                print(ar)
-            print("")
 
 if __name__ == "__main__":
     tests = {
@@ -431,6 +305,6 @@ if __name__ == "__main__":
     for key, value in tests.items():
         insert = value[0]
         delete = value[1]
-        insertion_test(rbt, insert)
-        deletion_test(rbt, delete)
+        Util.insertion_test(rbt, insert)
+        Util.deletion_test(rbt, delete)
         rbt.reset()

@@ -22,7 +22,7 @@ class MaxBinaryHeap:
 
     def minHeapify(self, array, size, idx):
         l = 2 * idx + 1
-        r = 2 * idx + 1
+        r = 2 * idx + 2
         minval_idx = idx
 
         if l < size and array[l] < array[minval_idx]:
@@ -57,12 +57,12 @@ class MaxBinaryHeap:
     def buildMaxHeap(self, array, size):
         start = self.size // 2 - 1
         for i in range(start, -1, -1):
-            self.maxHeapify(array, i, 0)
+            self.maxHeapify(array, size, i)
 
     def buildMinHeap(self, array, size):
         start = self.size//2 - 1
         for i in range(start, -1, -1):
-            self.minHeapify(array, i, 0)
+            self.minHeapify(array, size, i)
 
     def delete(self, num):
         pass

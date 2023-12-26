@@ -1,5 +1,141 @@
 class Util:
     @staticmethod
+    def search(root, value, tnil):
+        if root == tnil:
+            return False
+
+        if root.value == value:
+            return root
+
+        if value > root.value:
+            return Util.search(root.right, value, tnil)
+        else:
+            return Util.search(root.left, value, tnil)
+
+    @staticmethod
+    def min_node(node, tnil):
+        while(node.left != tnil):
+            node = node.left
+        return node
+
+    @staticmethod
+    def get_height(node, tnil):
+        if node == tnil:
+            return 1
+        lheight = Util.get_height(node.left, tnil) + 1
+        rheight = Util.get_height(node.right, tnil) + 1
+        return max(lheight, rheight)
+
+    @staticmethod
+    def is_balanced(node, tnil):
+        if node == tnil:
+            return 1
+
+        lh = Util.is_balanced(node.left, tnil)
+        if lh == 0:
+            return 0
+
+        rh = Util.is_balanced(node.right, tnil)
+        if rh == 0:
+            return 0
+
+        if abs(lh - rh) > 1:
+            return 0
+
+        return max(lh, rh) + 1
+
+    @staticmethod
+    def is_printable(node, tnil):
+        if node == tnil:
+            return 1
+
+        lh = Util.is_printable(node.left, tnil)
+        if lh == 0:
+            return 0
+
+        rh = Util.is_printable(node.right, tnil)
+        if rh == 0:
+            return 0
+
+        if lh != rh:
+            return 0
+
+        return max(lh, rh) + 1
+
+    # same as BST transplant
+    @staticmethod
+    def transplant(node, child_node, tree):
+        if node.parent == tree.tnil:
+            tree.root = child_node
+        elif node == node.parent.left:
+            node.parent.left = child_node
+        else:
+            node.parent.right = child_node
+
+        child_node.parent = node.parent
+        return
+
+    @staticmethod
+    def left_rotate(node, tree):
+        if node == tree.tnil:
+            return
+
+        newRoot = node.right
+        node.right = newRoot.left
+        node.right.parent = node
+        newRoot.left = node
+        Util.transplant(node, newRoot, tree)
+        node.parent = newRoot
+
+    @staticmethod
+    def right_rotate(node, tree):
+        if node == tree.tnil:
+            return
+
+        newRoot = node.left
+        node.left = newRoot.right
+        node.left.parent = node
+        newRoot.right = node
+        Util.transplant(node, newRoot, tree)
+        node.parent = newRoot
+
+    @staticmethod
+    def insertion_test(tree, array):
+        for i in array:
+            print(f"Inserting: {i}, root: {tree.root.value}, rootparent: {tree.root.parent.value if tree.root.parent else None}")
+            tree.insert(i)
+            tree.size = 0
+            tree.constructTreeArray()
+            if tree.height < 8:
+                print("Stored Tree")
+                Util.print_array_as_tree(tree.treeArray, tree.treeWithColor)
+                print("")
+                print(f"Vertical Tree: {tree.verticalArray}")
+            else:
+                print("Vertical Tree Lines")
+                for ar in tree.verticalArray:
+                    print(ar)
+                print("")
+
+    @staticmethod
+    def deletion_test(tree, array):
+        for i in array:
+            print(f"Deleting: {i}, root: {tree.root.value}, rootparent: {tree.root.parent.value if tree.root.parent else None}")
+            tree.delete(i)
+            tree.size = 0
+            tree.constructTreeArray()
+            if tree.height < 8:
+                print("Stored Tree")
+                Util.print_array_as_tree(tree.treeArray, tree.treeWithColor)
+                print("")
+                print(f"Vertical Tree: {tree.verticalArray}")
+            else:
+                print("Vertical Tree Lines")
+                for ar in tree.verticalArray:
+                    print(ar)
+                print("")
+
+    @staticmethod
     # works only for single digit numbers
     def print_array_as_tree(array, with_color=[]):
         if len(array) == 0:
