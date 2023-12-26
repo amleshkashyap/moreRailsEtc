@@ -1,3 +1,5 @@
+from collections import deque
+
 class Vertex:
     def __init__(self, key):
         self.key = key
@@ -199,7 +201,7 @@ class ShortestPaths:
             self.reset(graph)
 
     def reset(self, graph):
-        self.priority_queue = []
+        self.priority_queue = deque()
         self.edges = graph.edges
         self.weights = graph.weights
         self.has_negative_weight = graph.has_negative_weight
@@ -256,7 +258,7 @@ class ShortestPaths:
         self.distances[vertex] = 0
 
     def initialise_priority_queue(self, vertex):
-        self.priority_queue = [ [vertex, 0] ]
+        self.priority_queue.append([vertex, 0])
         for key in self.vertices:
             if key != vertex:
                 self.priority_queue.append([key, self.maxval])
@@ -288,18 +290,19 @@ class ShortestPaths:
 
     def relax(self, u, v):
         if self.distances[v] == self.distances[u] == self.maxval:
-            return
+            return False
 
         w = self.weights[u][v]
         if self.distances[v] > self.distances[u] + w:
             self.distances[v] = self.distances[u] + w
             self.previous[v] = u
+            return True
+        return False
 
     def dijkstra_single_source(self, vertex):
         self.initialise_priority_queue(vertex)
         while(len(self.priority_queue) > 0):
-            u = self.priority_queue[0][0]
-            self.priority_queue = self.priority_queue[1:]
+            u = self.priority_queue.popleft()[0]
             if u in self.weights:
                 for v in self.weights[u]:
                     self.relax(u, v)
@@ -316,9 +319,16 @@ class ShortestPaths:
 
     def bellman_ford_single_source(self, vertex):
         for i in range(self.len_vertices - 1):
+            res = False
             for edge in self.edges:
                 u, v = edge
-                self.relax(u, v)
+                if self.relax(u, v) != False:
+                    res = True
+            if res == False:
+                # all edges have been relaxed in < V iterations, there are no negative cycles
+                if i < self.len_vertices - 2:
+                    return True
+                break
 
         for edge in self.edges:
             u, v = edge

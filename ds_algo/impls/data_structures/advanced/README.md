@@ -174,7 +174,7 @@
   * B-Tree is defined via its degree t -
     - No node can have more than 2t-1 keys - hence, it can have a maximum of 2t children [every key can be thought of as a normal tree node,
       with a shared left and right child - except for the first and last node who don't share their left and right child respectively].
-    - No node, except root, can have less than t-1 keys - hence, it will have at least t children.
+    - No node, except root, can have less than t-1 keys.
     - Nodes and their children are arranged in a manner that satisfies the BST properties.
 
   * A B-Tree with degree 1 is not valid as it is allowed to have 0 keys, but must have 1 child - hence, search (and thus, other operations
@@ -189,30 +189,29 @@
     gets more than 2t-1 keys.
     - If root node was full during insertion, a new node is created and root is made its child, hence increasing the tree height by 1. Tree
       height doesn't increase in any other case.
-    - There can be many straightforward insertion cases when all the nodes encountered on the path are not full, and even the node to be
-      inserted at is not full.
+    - There can be many straightforward insertion cases when all the nodes encountered on the path are not full.
     - Worst case insertion time is O(tlogN) - logN for the height, and t for the split of every node on the path to final node. Best case
       can be O(t) + O(logN)
 
   * Deletion - Unlike insertion, the goal of deletion is to prevent a node from having less than t-1 keys. The steps described in CLRS for
     deletion ensure that it always deletes from a node with at least t keys, so as to be able to move 1 key downwards if required.
-    - Only straighforward case of deletion is when the key is in a leaf node which has t keys.
+    - Only straighforward case of deletion is when the key is in a leaf node with >= t keys (and all the nodes in the path with >= t keys)
 
-  * Check if a node has at least t children before descending to it for further search [and final deletion]. If it doesn't have -
+  * Check if a node has at least t keys before descending to it for further search [and final deletion]. If it doesn't have -
     - If it has a sibling with at least t children, then move a key from the parent to the node, move a sibling up to the parent, and
       adjust the pointers [based on whether it was a left or right sibling].
     - If it doesn't have a sibling with least t children, then merge it with any of the siblings [resulting in 2t-2 keys]. However,
       now there are max 2t children (t from each sibling) for 2t-2 keys (but 2t-2 keys can have only 2t-1 children). To fix the situation,
       move a child from the parent and make it the median key, thus handling the extra child.
-      - This pulling of a key from parent can leave the parent empty, and when that parent happened to be the root, leads to a reduction
+      - This pulling of a key from parent can leave the parent empty - this will happen only if the parent was root, and leads to a reduction
         in height of the tree - the only situation when a tree's height can reduce.
 
   * Above has ensured that all nodes being descended to have at least t keys - ultimately one will reach the node where the key to be
     deleted is present - if it's in a leaf node, delete the key and terminate. If it's an internal node, then -
-    - Find the predecessor and successor of the key to be deleted [in the same node] - say y and z respectively.
+    - Find the predecessor and successor child of the key to be deleted (left and right shared child) - say y and z respectively.
     - If y has at least t keys [NOTE: y has not been adjusted to have t keys above, only node and its parents have been], then replace
-       the key with the last child of y.
-    - If y has less than t keys, but z has >= t keys, then replace key by the first child of z.
+      the key with the last key of y.
+    - If y has less than t keys, but z has >= t keys, then replace key by the first key of z.
     - If both y and z have t-1 keys, then merge all the keys of y and z, and adjust the pointers [NOTE: y now has 2t-2 keys].
     - Terminate
 
@@ -221,15 +220,14 @@
     explain the algorithms by providing the pseudocode first, rather than building it bottom-up.
 
   * A quick google search on 'why is red black deletion hard' reveals suggestions on reading 2-3 trees first [not mandatory to understand
-    RBTree procedures] - however, the red-black tree rotations seem almost magical [NOTE: AVL tree rotations are much more intuitive]
+    RBTree procedures] - however, the red-black tree rotations seem almost magical [NOTE: AVL tree (1962) rotations are more intuitive]
     - But looking at the B-Tree deletion, wherein one is supposed to perform merges based on moving a left/right child value to the parent,
       and bringing down a parent value to the sibling of that left/right child, it becomes clear how to think about rotations - these
       movements which are much easier to think about with B-Tree suggest the basis for using rotations.
     - When a left sibling of a node has >= t keys, the last key is moved to the parent, parent's key is made the first key of the child in
       need, and the right child of left sibling's last key is moved as the first child of the child in need - this is the right rotate
       operation in BST. Similarly, one can have a left rotate when the movement is made from the right sibling of the child in need.
-      Merging of children is not directly related to rotation, but may suggest how the colorings are chosen [unclear].
-    - It's worth noting that B-Tree was invented in 1970 and RB Tree in 1978, and perhaps they should be taught in that order.
+    - It's worth noting that B-Tree was invented in 1970 and RB Tree in 1978.
 
   * The procedures provided in CLRS [and almost complete implementation given in btree.rb (more testcases required)] are based on a certain
     definition of B-Tree (ie, a node can have a max of 2t children, and that while deletion, one must maintain t values on the path
@@ -238,5 +236,4 @@
     in order to move up the tree as required (upon insertion/deletion).
     - Some folks suggest that such a definition and implementation was chosen so that the parent nodes which were already loaded while
       traversing down the tree (in older times, when machines had small RAMs and much smaller cache/TLB), did not have to be loaded again
-      if merges were required up the tree, in order to reduce the page faults. Page faults can be severe even these days, but perhaps not
-      as much. [Check](https://dl.acm.org/doi/10.1145/1810226.1814327)
+      if merges were required up the tree, in order to reduce the page faults. [Check](https://dl.acm.org/doi/10.1145/1810226.1814327)
