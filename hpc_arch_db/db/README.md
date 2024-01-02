@@ -372,3 +372,21 @@
 ### SpiceDB
   * Ref - https://github.com/authzed/spicedb
   * https://authzed.com/blog/what-is-google-zanzibar
+
+
+## Big Data
+  * General
+    - When the data, and its underlying data structures (like metadata and index) are too big to fit in the main memory.
+    - I/O efficient and cache oblivious data structures
+    - Ex. libFT [by TokuTek, used in TokuDB and TokuMX] - persistent data structures for storing data on disk. provides Berkeley DB API
+
+  * [More On DBMS/DS](https://ssudan16.medium.com/storage-structures-used-in-databases-and-distributed-systems-1405f1851afc)
+    - Inverted Index (pre-1970)
+    - Bloom Filter (1970)
+    - B+ Trees (1973)
+    - Merkel Trees (1979)
+    - Skip List (1989)
+    - LSM Trees (1996)
+    - [Consistent Hashing](https://dgryski.medium.com/consistent-hashing-algorithmic-tradeoffs-ef6b8e2fcae8) (1997)
+    - Count Min Sketch (2003)
+    - HyperLogLog (2007)
