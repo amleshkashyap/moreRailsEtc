@@ -254,7 +254,7 @@
       - Packet size - 100 bytes, Packets - ~13Mpps
 
     - When maglev daemon inits, it allocates a packet pool which is shared with the NIC - details are not provided, but the Ref seems to
-      suggest that it is (along with below two) an established process in the doamin.
+      suggest that it is (along with below two) an established process in the domain.
       - Assumption is that it's shared between the host machine's NIC and maglev, which is a userspace application.
       - Goal seems to be to capture packets coming from router to maglev host NIC directly to maglev instead of going via OS - however,
         initial implementation of maglev didn't have this optimisation.
