@@ -139,5 +139,47 @@
       - NFS mount (mountd, rpc.mountd)
       - 
 
-##### Linux Kernel
+### Linux Kernel
   * [Official Doc](https://docs.kernel.org/)
+  * It is highly unlikely that anything will go wrong within an established operating system, hence learning about them is almost irrelevant
+    for developing any middlewares, application softwares and intelligent systems.
+
+#### Completely Fair Scheduler
+  * Default scheduler for the "normal" threads (with no real time constraints) - maximize CPU utlilisation and interactive performance.
+  * Schedulable Entities
+    - Thread (minimum schedulable entity, ie, task)
+    - Group of threads
+    - Multithreaded processes
+    - All processes of a user
+  * Each task embeds a member (sched\_entity) that represent all the schedulable entities that the task belongs to.
+    - Per CPU run queue sorts the sched\_entity structures in time ordered fashion in a red black tree, where leftmost node is occupied by
+      the entity which has the least slice of execution. Nodes are indexed by processor execution time in ns.
+    - For every process, maximum execution time is calculated, which represents the time that would've been alloted to the process on an
+      "ideal processor". max\_exec\_time = waiting\_time / processes
+
+  * Scheduling
+    - Choose leftmost node of the tree and send for execution.
+    - If execution completed, remove from the system and tree.
+    - If process reaches max\_exec\_time or stopped (interrupt, syscall), reinserted to the tree based on new execution time.
+    - Select new leftmost node of the tree.
+    - Node insertion is O(log(N)) and picking for scheduling is O(1).
+
+  * Upcoming scheduler - Earlier Eligible Virtual Deadline First Scheduling (1995)
+    - Priorities based on - virtual time, eligible time, virtual requests, virtual deadlines
+
+#### Weighted Fair Queueing (WFQ) And O(1) Scheduler
+  * WFQ is a network scheduling algorithm
+    - Allows the scheduler to specify the fraction of capacity that needs to be given for each flow.
+    - Weights are dynamic and can be updated based on needs, to ensure quality of service.
+    - The algorithm involves basic computation and can be found on Wikipedia.
+
+  * O(1) Scheduler (2003)
+    - Before this, linux scheduling was O(n) (eg, 4.4BSD Scheduler) - this one gave a major boost.
+    - Two arrays were maintained - active and expired - once a running thread was preempted after its time quantum, it was moved to the
+      expired array - once the active array became empty, pointer is switched to make the expired array as the active array and vice versa.
+      Since it's similar to FIFO, it was O(1).
+    - All the scheduling algorithms in 2003 linux were O(1), allowing it to handle huge number of tasks - this was due to 2 queues -
+      runqueues, priority arrays. However, the interactivity of the OS wasn't as efficient.
+    - Scheduler would try to identify interactive processes by analyzing average sleep time (time spent waiting for input) - processors with
+      long sleep times are probably waiting for user input, thus categorized as interactive, and receiving a priority bonus and lowering
+      the priority threads assumed to beo non-interactive (the assumption was a heuristic).

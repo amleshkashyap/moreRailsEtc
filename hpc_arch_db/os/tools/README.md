@@ -90,8 +90,35 @@
 
   * Low Level Kernel Init
     - [Code](https://pintos-os.org/cgi-bin/gitweb.cgi?p=pintos-anon;a=blob_plain;f=src/threads/start.S;h=29ffa7a42f3ed45a948befce9bceb9bd3c518ff5;hb=HEAD)
+    - Loader's last action is to transform control to kernel's entry point start () - it switches the CPU from 16-bit real mode to 32-bit
+      protected mode.
+    - It obtains the machine's memory size from the BIOS (which can detect upto 64MB RAM - max supported by pintos). It's stored as pages.
+    - It then enables the A20 line, the 20th address line - which is fixed at 0, thus disabling any accesses to memory beyond 2^20 (1MB).
+      Any OS that needs more memory has to enable it.
+    - Loader creates a basic page table - which maps the 64MB at the base of virtual memory (starting at 0) to the identical physical
+      addresses. It also maps the same physical memories starting at LOADER\_PHYS\_BASE (default 0xc0000000 - 3GB) - this is the only
+      mapping required by Pintos, but it still needs to enable the former mapping. Pintos is at 0x20000, but wants to be at 0xc0020000 -
+      it can't jump there without enabling it, and it can't enable it without jumping there (as it needs to be there).
+    - After initialising page tables, CPUs control registers are loaded to turn on protected mode, and sets up segment registers. Interrupts
+      are disabled. Then it calls main ().
 
   * High Level Kernel Init
+    - Calls bss\_init - which clears kernel's BSS, a segment initialized to all zeroes. Any variable declared outside a function without
+      being initialized (eg, static variables) resides in BSS - BSS is all zeroes, and there's no section in process image for it - memset
+      is used to set it to all zeroes.
+    - Then command line arguments are parsed. thread\_init () is called to initialize the thread system.
+    - Kernel page allocator is initialized with palloc\_init (). Arbitrary memory block allocation is initialized via malloc\_init ().
+      Page table for the kernel is setup via paging\_init (). tss\_init () and gdt\_init () are called to setup task segment and file
+      descriptor table for allowing the execution of user program's.
+    - intr\_init () sets up the IDT for interrupt handling - timer\_init () and kbd\_init () are used to setup timer and keyboard interrupts.
+      input\_init () merges the serial and keyboard input in one stream. Handling interrupts from user programs is setup via
+      exception\_init () and syscall\_init ().
+    - thread\_start () is called to create the idle\_thread and enable interrupts. Serial port I/O via interrupts is initialized, and
+      timer is caliberated for accurate short delays. IDE disks and filesystem is also initialized.
+    - run\_actions () executes the action provided in the command line, which is used for running tests and user programs (via run\_test ()
+      and process\_execute () - former is run as kernel threads). Main thread then calls thread\_exit () and lets others run.
+    - Running the tests for first project always exit along with main thread as tests create kernel threads and operations are ordered in
+      a way that main thread should be the last remaining non-idle thread - any bugs in the implementation leads to page faults.
 
 
 ### Threads
@@ -125,8 +152,22 @@
     - function3 enables interrupts and calls the actual function to be performed by the new thread.
 
 ### Schedulers
+  * Scheduler Goals
+    - Maximize throughput
+    - Minimize wait time
+    - Minimize latency or response time
+    - Maximize fairness
+    - Meeting deadlines (for real time systems)
+
   * Threads performing high IO require fast response times to keep the devices busy, but need little CPU time. CPU bound threads have the
     opposite requirement. Other threads have varying requirements.
+
+  * Priority Scheduling
+    - Highest priority threads are always picked up first.
+    - If multiple threads have the same priority, perform round-robin scheduling among them.
+    - This can lead to starvation, eg, if a high priority thread is waiting to acquire a lock held by a lower priority thread which was
+      created earlier and had acquired the lock, then the low priority thread will never get a chance to run (it'll get a chance since
+      the high priority thread will call sema\_down and move itself to blocked state.
 
   * Multilevel Feedback Queue Scheduler (from 4.4BSD)
     - Maintains multiple queues of ready to run threads, each queue with a different priority.
@@ -146,6 +187,10 @@
       will have a recent\_cpu value of 0, and will ideally receive a high enough priority at some point to be scheduled.
     - Fixed point computations are not supported in kernels as not all the hardware they'll run on will have a floating point unit, hence
       the thread switchers don't copy floating point registers as well.
+    - In Pintos, priority is calculated every 4th timer tick for every thread, recent\_cpu is calculated every second for every thread and
+      load\_avg is calculated every second (for the system). In addition, recent\_cpu is incremented by 1 for the running thread every timer
+      tick. Nice can be updated manually for the running, and must lead to priority recalculation. Priority recalculations will lead to a
+      thread being moved from one priority ready list to another priority ready list.
 
 ### Synchronization
   * Disable Interrupts
@@ -252,7 +297,11 @@
 
 ## Executable And Linkable Format (ELF)
   * [Ref](https://refspecs.linuxfoundation.org/elf/elf.pdf)
-  * Created by assembler and link editor, to be executed directly on a processor.
+  * Created by assembler and link editor (linker), to be transformed to a process image, to be executed directly on a processor.
+    - Dynamic linker and interpreter will control the execution of programs during runtime (if required).
+  * It is highly unlikely that anything will go wrong during object file and process image generation, program loading, dynamic linking and
+    program execution, on established operating systems, programming languages and processor implementations - hence learning about them
+    is almost irrelevant for developing most middlewares, application software, intelligent systems or even new operating systems.
 
   * Types
     - Relocatable - Holds code and data suitable for linking with other object files to create an executable or shared object file.
@@ -410,9 +459,7 @@
     - sh\_offset - Gives the byte offset from the beginning of the object file to the first byte of the section.
     - sh\_size - Size of section in bytes
     - sh\_link - Holds the section table header index link, whose meaning depends on the section type.
-      -
     - sh\_info - Extra information whose meaning depends on the section type.
-      -
     - sh\_addralign - section may hold a different datatype (eg, doubleword), hence the entire section needs to be aligned - the value is
       given by this member. 0/1 mean no alignment.
     - sh\_entsize - Some sections hold a table of fixed size entries (eg, symbol table). This member gives the size of each entry in bytes.
@@ -484,6 +531,222 @@
       - r\_addend - A constant added used to compute the value to be stored in the relocatable field.
     - A relocation section references two other sections, symbol table, and section to modify. sh\_info and sh\_link from the section header
       table structure are used for these.
+
+### Unix System V Specific
+  * Special Sections
+    - .dynstr - Section holds the strings for dynamic linking, mostly the ones that represent names associated with symbol table entries.
+    - .dynsym - Holds the dynamic linking symbol table.
+    - .fini - Holds executable instructions that contribute to process termination.
+    - .init - Holds executable instructions that contribute to process initialisation - this is executed before calling the program entry.
+    - .interp - Holds the path name of a program interpreter.
+    - .relname, .relaname - Holds relocation information.
+
+  * Symbol Table
+    - Function symbols (STT\_FUNC) in shared object files - When another object file references a function from a shared object, link editor
+      automatically creates a procedure linkage entry table for the referenced symbol. Shared objects with type other than STT\_FUNC are
+      not automatically referenced via this procedure linkage table.
+    - Global vs Weak Symbols
+      - When combining several relocatable object files (via link editor), multiple definitions of STB\_GLOBAL symbols with same name are
+        not allowed. Also, if a global symbol exists, then adding weak symbols with same name doesn't lead to errors (global definition is
+        picked up, ignoring the weak symbols). Also, if a common symbol (st\_shndx = SHN\_COMMON) exists with a name, then adding weak
+        symbols with same name is not an error, and they'll be ignored.
+      - When link editor searches the archive libraries, it extracts archive members that contain the definitions of undefined global
+        symbols - however, undefined weak symbols are unresolved and have value = 0.
+
+  * Program Header
+    - p\_paddr - This contains the physical address. Physical addressing is ignored for application programs, hence this member is not
+      relevant for executables and shared objects.
+
+  * Base Address
+    - Virtual addresses in program headers need not be the actual virtual address in process image.
+    - Since executables typically have the absolute code, segments must reside at the virtual addresses used to build the executable
+      file (for correct process execution).
+    - Also, shared object segments typically contain position independent code, which allows for segments virtual address to change across
+      various processes without invalidating process execution behaviour.
+    - Systems choose virtual addresses for processes, but for segments, relative positions are maintained. Since position independent code
+      uses relative addressing between segments, the difference between virtual address in object file and process image must match for
+      every segment.
+    - For any one executable or shared object in a given process, the difference between the virtual address of a segment in memory and
+      virtual address in the file (for that segment) is a constant value called base address.
+    - Base address is used for relocating process image during dynamic linking.
+    - For executables/shared objects, base address is calculated using during execution using - virtual memory load address, maximum page
+      size, lowest virtual address of a program's loadable segment (lowest p\_vaddr value for a PT\_LOAD segment).
+    - Example
+    ```
+      Source        Text          Data        Base Address
+        File        0x200        0x2a400        0x0
+
+      Process 1   0x80081200   0x800ab400     0x80081000
+
+      Process 2   0x900c0200   0x900ea400     0x900c0000
+    ```
+
+  * Segments
+    - Segment permissions are given by - 0 (none), 1 (ex only), 2 (wr only), 3 (wr, ex), 4 (rd only), 5 (rd, ex), 6 (rd, wr), 7 (rd, wr, ex)
+    - Text segments contain read only instructions and data, and usually include the following sections.
+    ```
+       ---------
+      |.text    |
+      |---------|
+      |.rodata  |
+      |---------|
+      |.hash    |
+      |---------|
+      |.dynsym  |
+      |---------|
+      |.dynstr  |
+      |---------|
+      |.plt     |
+      |---------|
+      |.rel.got |
+       ---------
+    ```
+    - Data segments contain writable data and instructions, usually with these sections - .data, .dynamic, .got, .bss
+
+  * Program Interpreter
+    - An executable that participates in dynamic linking has a PT\_INTERP program header element. During execution, system retrieves a
+      path name from the segment of this type, and creates a process image from the interpreter's file segment (not from the actual
+      executables file segments) - then the control is passed to the interpreter to provide an environment for the application program.
+    - Interpreter can receive control in 2 ways - (1) either a file descriptor to the executable file, which can be then used to read and
+      map the executable file segments in memory, (2) system may load the executable file in the memory instead of providing a fd to the
+      interpreter.
+    - An interpreter maybe an executable or a shared object - (1) shared object (typical) - loaded as position independent, with addresses
+      varying across processes. It'll usually not conflict with the original segment address of the original executable file, (2) executable,
+      which is loaded at a fixed address - virtual addresses may collide and interpreter needs to resolve it.
+
+  * Dynamic Linker
+    - When building an executable file that needs dynamic linking, link editor adds a program header entry of type PT\_INTERP.
+    - The dynamic linker, along with executable file, creates the process image
+      - Adds memory segments of the executable file in the process image
+      - Adding shared memory segments
+      - Performing relocations for executable and its shared objects
+      - Closing the fd that was used to read the executable file (if one was given)
+      - Transferring control to program to make it appear as if the program was directly executed
+    - Link editor also constructs other data that assist the dynamic linker - these data reside in loadable segments
+      - .dynamic section (SHT\_DYNAMIC)
+      - .hash section for symbol hash table
+      - .got and .plt sections which hold 2 tables - global offset table (got) and procedure linkage table (plt). Former is used for
+        position independent code, latter for functions (as given above).
+    - Dynamic linker relocates the memory image and updates the absolute addresses (which differ from address in file) before giving the
+      control to the process. Dynamic linker is permitted to evaluate PLT entries lazily, avoiding symbol resolution and relocation
+      overhead for functions that are not called. If LD\_BIND\_NOW is set, all the relocations have to be done beforehand though.
+    - Note: Lazy binding usually improves the overall application performance by skipping some linking overheads, but can be undesirable
+      the following situations - (1) first reference to a shared object function takes longer than the subsequent references - some
+      applications may find this intolerable, (2) if an error occurs and dynamic linker is unable to resolve the symbol, it will terminate
+      the program - this can happen at arbitrary times and some applications may find it intolerable. When lazy binding is turned off,
+      such failures occur at the process initialization.
+
+  * Dynamic Section
+
+  * Shared Object Dependencies
+    - When link editor processes archive libraries, it extracts the library members and copies them to the object file. These are statically
+      linked. Shared objects also provides these services which are attached to the process image.
+    - When creating memory segments for process image, the dependencies (recorded in DT\_NEEDED) tell the shared objects required.
+      Symbolic references are resolved via BFS, starting from the symbol table of the executable, followed by the symbol table of DT\_NEEDED
+      entries at various depths, in order.
+
+  * Global Offset Table
+    - Holds abolute addresses for position independent addresses in private data. This table is essential for dynamic linking to work.
+
+  * Procedure Linkage Table
+    - Redirects position independent function calls to absolute addresses. Link editor can't resolve the execution transfers (eg, function
+      calls) from one executable/shared object to another - these control transfer entries are present in PLT.
+
+  * Hash Table
+  * Initialization And Termination
+    - Example
+    ```
+
+     -- NEEDED lists
+
+      a.out -> b -> d -> e
+          b -> d -> f
+          d -> e -> g
+
+     -- Dependency Graph
+
+           a.out
+         /   |   \
+        b -> d -> e
+        |    |
+        f    g
+
+     -- Orderings
+
+      e -> g -> d -> f -> b -> a.out
+
+      g -> f -> e -> d -> b -> a.out
+
+    ```
+
+  * Program Loading
+    - When system creates/augments a process image, it copies a segment from the file to a virtual memory segment. When the system will
+      physically read the file depends on the program execution behaviour, system load, etc. A process doesn't require a physical page unless
+      unless it references a logical page during execution, and processes leave many pages unreferenced - hence delaying physical reads
+      is an obvious choice for improving performance.
+    - The executable and shared object files must have segment images whose file offsets and virtual addresses are congruent modulo the
+      page size, in order to be able to achieve the above efficiency (ie, copy paste with no extra ops). For intel arch, virtual addresses
+      are congruent modulo 4KB (0x1000) or large powers of 2.
+    - In the below executable file example, file offsets and virtual addresses are congruent modulo 4KB for text and data. However, 4 file
+      pages hold impure text/data -
+      - First text page contains ELF header, program table header and other information.
+      - Last text page holds a copy of the beginning of data.
+      - First data page has a copy of the end of the text.
+      - Last data page may contain file information not relevant to the running process.
+
+
+  * Executable File Example
+    ```
+      Offset      File                  Virtual Address
+
+            0  ----------------------
+              |  ELF Header          |
+              |----------------------|
+              | Program Header Table |
+              |----------------------|
+              | Other Information    |
+              |----------------------|
+        0x100 | Text Segment         |  0x8048100 (134512896)
+              |    ...               |
+              | 0x2be00 B (179712)   |  0x8073eff (134692607)
+              |----------------------|
+      0x2bf00 | Data Segment         |  0x8074f00 (134696704)
+              |    ...               |
+              | 0x4e00 B (19968)     |  0x8079cff (134716671)
+              |----------------------|
+      0x30d00 | Other Information    |
+               ----------------------
+    ```
+
+  * Process Image Segment Example
+    ```
+      Virtual Address           Contents        Segment
+
+                        --------------------
+            0x8048000  | Header Padding     |
+                       | 0x100 B (256)      |
+                       |--------------------|
+            0x8048100  | Text Segment       |
+                       |    ...             |   Text
+                       | 0x2be00 B          |
+                       |--------------------|
+            0x8073f00  | Data Padding       |
+                       | 0x100 B            |
+                       |--------------------|
+            0x8074000  | Text Padding       |
+                       | 0x100 B            |
+                       |--------------------|
+            0x8074f00  | Data Segment       |
+                       |    ...             |   Data
+                       | 0x4e00 B           |
+                       |--------------------|
+            0x8079d00  | Uninitialized Data |
+                       | 0x1024 B (4132)    |
+                       |--------------------|
+            0x807ad24  | Page Padding       |
+                       | 0x2dc B (732)      |
+                        --------------------
+    ```
 
 ## List Of Standard Signals In Linux
   * Source - [Ref1](https://faculty.cs.niu.edu/~hutchins/csci480/signals.htm), [Ref2](https://man7.org/linux/man-pages/man7/signal.7.html)
