@@ -182,4 +182,4 @@
       runqueues, priority arrays. However, the interactivity of the OS wasn't as efficient.
     - Scheduler would try to identify interactive processes by analyzing average sleep time (time spent waiting for input) - processors with
       long sleep times are probably waiting for user input, thus categorized as interactive, and receiving a priority bonus and lowering
-      the priority threads assumed to beo non-interactive (the assumption was a heuristic).
+      the priority threads assumed to be non-interactive (the assumption was a heuristic).

@@ -1,3 +1,40 @@
+## Arbitrary Memory Manipulation Using C
+  * Unknown buffers - `void *`
+  * Writing to a memory location - `memcpy (void * dest, const void *src, size_t n)`
+    - If a pointer to src is available, then the address `&src` can be passed along with relevant size
+    - This is useful for writing data directly to virtual memory pages (which are zeroed bytes of, say, 4kB).
+
+  * Setting bytes to a contiguous memory location - `memset (void *str, int c, size_t n)`
+  * Arbitrary data copying across data types - this can be used to perform arbitrary paddings.
+    ```
+    void *zz = malloc (sizeof (int));
+    memset (zz, 0, sizeof (int));      // zero out the memory location - 0x00000000
+    uint8_t one = 255;
+    for (int i = 0; i < 4; i++) {
+      memcpy (zz + i, &one, sizeof (uint8_t));    // set 1 byte per iteration - 0xff000000 -> 0xffff0000 -> 0xffffff00 -> 0xffffffff
+      int val = *((int *) zz);
+      printf("int value after: %d, %d, %x\n", i, val, val);
+    }
+    ```
+  * Double Pointers - A pointer to another pointer stores the address of the first pointer -> this can be used to deal with storing
+    addresses in a defined format so as to be able to fetch them later in a different context. This is used to setup the execution's
+    stack pointer for passing the command line arguments (argc, argv).
+    - Arbitrary copying example
+    ```
+      void *ptr = malloc (sizeof (char *));                  // data in heap
+      memcpy (ptr, "one", sizeof (char *));
+      printf("ptr at: %p, value is: %s\n", ptr, ptr);
+      void *nptr = "two";                                    // data in stack
+      printf("nptr at: %p, value is: %s\n", nptr, nptr);
+      char **store = malloc (sizeof (char *));               // a double pointer to store the "value of address" in a pointer
+      memcpy (store, &ptr, sizeof (char *));                 // store the "value of address" stored at ptr
+      int address = *((int *) store);                        // get the above "value of address" from store
+      printf("value: %s, address: %p\n", *store, address);   // value - one, address - from ptr
+      memcpy (store, &nptr, sizeof (char *));
+      address = *((int *) store);
+      printf("value: %s, address: %p\n", *store, address);   // value - two, address - from nptr
+    ```
+
 ## [Bochs](https://bochs.sourceforge.io/)
   * Intel x86 simulator
     - CPU
@@ -189,8 +226,8 @@
       the thread switchers don't copy floating point registers as well.
     - In Pintos, priority is calculated every 4th timer tick for every thread, recent\_cpu is calculated every second for every thread and
       load\_avg is calculated every second (for the system). In addition, recent\_cpu is incremented by 1 for the running thread every timer
-      tick. Nice can be updated manually for the running, and must lead to priority recalculation. Priority recalculations will lead to a
-      thread being moved from one priority ready list to another priority ready list.
+      tick. Nice can be updated manually for the running thread, and must lead to priority recalculation. Priority recalculations will lead
+      to a thread being moved from one priority ready list to another priority ready list.
 
 ### Synchronization
   * Disable Interrupts
@@ -269,6 +306,12 @@
     - External interrupts are captured outside CPU via programmable interrupt controllers (PIC) - these modules are initialised along with
       IDT - at the completion of interrupts, PIC must be notified (what is the notification mechanism)?
 
+  * Task-State Segment (TSS) - Most x86 OSes ignore TSS.
+    - For interrupts that occur in user mode, stack switching can only be done using TSS.
+    - When interrupt occurs in user mode (ring 3), processor consults ss0 and esp0 members of the current TSS to determine the stack to use
+      for handling the interrupt - at least these fields must be initialized and available to support interrupts in user mode.
+    - When code interrupted by the interrupt handler is in the same ring as the interrupt handler, then it's kernel mode - TSS irrelevant.
+
 ### Memory Allocation
   * Typical page sizes - 512B to 8192B, usually 4096B (4kB).
   * Page Allocator - Allocates memory as pages, often one page at a time (can do more contiguous pages too). Usually maintains 2 pools
@@ -284,7 +327,6 @@
     - Some memory is wasted in both cases, and real operating systems focus on minimizing this wastage.
     - Most small requests do no require a call to page allocator - and calls to page allocator need more than 1 page can fail due to
       fragmentation.
-
 
 ### Virtual Addresses
 
@@ -407,7 +449,8 @@
       - PT\_DYNAMIC - Dynamic linking info
       - PT\_INTERP - Name of dynamic loader (String which provides the interpreter to be invoked).
       - PT\_NOTE - Auxiliary info (along with location and size)
-      - PT\_SHLIB -
+      - PT\_SHLIB - Reserved segment type with unspecified semantics. In System V, a program that contains an array element of this type
+        (in the program header) does not conform to the ELF specifications.
       - PT\_PHDR - Specifies the location and size of the program header table, in file and process image. If this is present, then
         it must precede any loadable segment entry. Also, it should not appear more than once
       - PT\_STACK - Stack segment
@@ -517,7 +560,7 @@
   * Relocation
     - Connecting symbolic references to symbolic definitions.
     - Eg, when program calls a function, the "call" instruction must transfer control to the proper destination address at execution.
-    - These files must have information that describes how to modify the section contents, helping create the correct process iamge.
+    - These files must have information that describes how to modify the section contents, helping create the correct process image.
     - struct Elf32\_Rel
       - r\_offset - Provides the location at which to apply the relocation action. For a relocatable file, the value is the byte offset
         from the beginning of the section to the storage unit affected by relocation. For executables/shared objects, value is the virtual
@@ -573,12 +616,13 @@
       size, lowest virtual address of a program's loadable segment (lowest p\_vaddr value for a PT\_LOAD segment).
     - Example
     ```
-      Source        Text          Data        Base Address
-        File        0x200        0x2a400        0x0
+      Source    |    Text     |     Data     |   Base Address
+      -------------------------------------------------------
+        File    |    0x200    |    0x2a400   |     0x0
 
-      Process 1   0x80081200   0x800ab400     0x80081000
+      Process 1 |  0x80081200 |  0x800ab400  |   0x80081000
 
-      Process 2   0x900c0200   0x900ea400     0x900c0000
+      Process 2 |  0x900c0200 |  0x900ea400  |   0x900c0000
     ```
 
   * Segments
@@ -747,6 +791,9 @@
                        | 0x2dc B (732)      |
                         --------------------
     ```
+
+
+## System V Application Binary Interface
 
 ## List Of Standard Signals In Linux
   * Source - [Ref1](https://faculty.cs.niu.edu/~hutchins/csci480/signals.htm), [Ref2](https://man7.org/linux/man-pages/man7/signal.7.html)

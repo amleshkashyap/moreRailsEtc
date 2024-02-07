@@ -129,6 +129,187 @@
     - Can route to many ports on a single target
 
 
+## System Calls For Sockets
+  * [Ref](https://man7.org/linux/man-pages/man2/socket.2.html)
+  * [Specs](https://pubs.opengroup.org/onlinepubs/009604499/functions/socket.html)
+  * Sockets are relevant for building any client or server application. Following method descriptions are useful to understand the basic
+    operations going underneath and are the tools for building such applications.
+    - [This repo](https://github.com/jams2/py-dict-client/blob/main/dictionary_client/dictionary_client.py) writes a client for the DICT
+      protocol (a tiny but real protocol with barely any clients - explore socket programming details).
+
+  * Structures
+   ```
+     struct sockaddr {
+       sa_family_t sa_family;
+       char        sa_data[14];
+     }
+
+     struct sockaddr_un {          // Unix Domain Socket Struct
+       sa_family_t sun_family;     // Value is always AF_UNIX
+       char        sun_path[108];  // Pathname
+     }
+
+     struct pollfd {
+        int fd;           // File descriptor
+        short events;     // Requested events
+        short revents;    // An output value - filled by kernel with events that actually occurred
+     }
+   ```
+
+  * int socket (int domain, int type, int protocol)
+    - Creates an unbound socket in a communication domain, and returns the lowest numbered fd not opened for the process, for operating on
+      the socket.
+    - domain - Communications domain for which socket is created - it selects the protocol family. Some types for web apps -
+      - AF\_UNIX - Local communication.
+      - AF\_LOCAL - Same as AF\_UNIX
+      - AF\_INET - IPv4 protocols
+      - AF\_INET6 - IPv6 protocols
+      - AF\_NETLINK - Kernel user interface device
+      - AF\_PACKET - Low level packet interface
+      - AF\_RDS - Reliable Datagram Socket protocols
+      - AF\_PPPOX - PPP transport layer for L2 tunnels (L2TP, PPPoE)
+      - AF\_BLUETOOTH - Bluetooth low level protocols
+      - AF\_ALG - Kernel crypto API
+      - AF\_VSOCK - Hypervisor guest communications (VMWare Sockets)
+
+    - type - Socket type which determines the semantics of the communication.
+      - SOCK\_STREAM - Sequenced, reliable, 2-way, connection based byte streams. Out of band data transmission maybe supported
+      - SOCK\_DGRAM - Connectionless, unreliable messages of fixed maximum length (datagrams)
+      - SOCK\_SEQPACKET - Sequenced, reliable, 2-way, connection based data transmission path for datagrams of fixed max length - consumer
+        must read an entire packet with each system call (as max buffer size is known).
+      - SOCK\_RAW - Raw access to the network protocol
+      - SOCK\_RDM - Reliable datagram layer that doesn't guarantee ordering
+      - SOCK\_PACKET - Obsolete. Used to receive raw packet from the device driver. (Use `packet` syscall).
+      - SOCK\_NONBLOCK - Sets the O\_NONBLOCK status flag on the open fd which is referred by the return fd value. It's a performance
+        enhancement. To specify this type, take a bitwise 'or' of the required type's value with this value.
+      - SOCK\_CLOEXEC - Sets the close-on-exec flag on the returned fd. Value can be set with bitwise 'or' as above.
+
+    - protocol - Specifies the particular protocol to be used. Usually, for a given domain and socket type, support for only one protocol
+      exists, and a value of 0 should be fine. However, if multiple protocols exist, value should ideally be provided.
+      - ip, tcp, udp
+      - There are separate system calls to obtain the protocol numbers or convert protocol string to number.
+
+    - Errors
+      - EACCES - Permission to create a socket of the type/protocol is denied.
+      - EAFNOSUPPORT - Address family not supported
+      - EINVAL - Protocol is unknown/unavailable
+      - EINVAL - Invalid flags in type
+      - EMFILE - Per process limit on number of open fd has been reached
+      - ENFILE - System wide limit for number of open fd has been reached
+      - EPROTONOSUPPORT - Protocol not supported by the address family or the implementation
+      - ENOBUFS - Insufficient resources available to perform the operations
+      - ENOMEM - Insufficient memory available to fulfill the request
+      - EPROTOTYPE - Socket type not supported by protocol (From Spec)
+
+  * Socket Types. For SOCK\_STREAM
+    - Fully duplex byte streams which do not preserve record boundaries.
+    - Socket must be in connected state for data exchanges.
+    - `connect` syscall can be used to connect to another socket.
+    - `read`, `write`, `send`, `recv` and variants can be used for data exchange - out of band data may be sent/received as well.
+    - Protocols implementing this type must ensure that data is not lost/duplicated.
+    - If a piece of data for which buffer space is available can't be transmitted in some timeframe, then the connection is considered dead.
+      When SO\_KEEPALIVE is enabled, protocol checks if other end is still alive.
+    - When a process sends or receives on a broken stream, SIGPIPE is raised which can cause the process to exit if not handled.
+    - SOCK\_SEQPACKET has the same syscalls - however, `read` will return only the requested amount of data, discarding the rest.
+      Message boundaries are also preserved in the incoming datagram.
+    - SOCK\_DGRAM and SOCK\_RAW allow sending/receiving datagrams via `sendto` and `recvfrom`.
+    - When the network signals an error to the protocol module (eg, ICMP or IP message), the error code is set for the socket, which is
+      returned on the next operation on the socket. Per socket error queue can also be enabled for more details as these operations are
+      asynchronous.
+    - Operations are available to send signals when out of band data arrives (SIGURG) or socket breaks unexpectedly (SIGPIPE) for a process
+      or process group. It's possible for process and process groups can receive I/O notifications and asynchronous notifications for I/O - 
+      for such processes/groups, SIGIO can be set during errors.
+
+  * int connect (int sockfd, const struct sockaddr \*addr, socklen\_t addrlen)
+    - Connects the socket referred to by sockfd to the address specified by addr (whose length is given by addrlen), returning success flag.
+      - Passing length for pointers is present across C methods - check arbitrary memory manipulation
+    - Format of address in addr is specified by the address space of sockfd.
+    - For sockfd of type SOCK\_DGRAM, addr refers to the default address for exchange of datagrams.
+    - For sockfd of type SOCK\_SEQPACKET and SOCK\_STREAM, connection is attempted with another socket bound to addr.
+    - Some sockets may connect only once (UNIX domain sockets), while others may connect multiple times to change their association (eg, UNIX
+      datagram sockets)
+    - Errors
+      - EACCES - Write permission is denied on the socket file or search permission denied for directory of the file.
+      - EACCES - An SELinux policy denied connection (eg, a policy where HTTP proxy can only connect to ports for HTTP servers, but proxy
+        tried to connect to a different port).
+      - EADDRINUSE - Local address already in use.
+      - EADDRNOTAVAIL - sockfd was not bound to an address, and upon binding it to an ephemeral port, all port numbers are in use.
+      - EAFNOSUPPORT - Given address didn't have the correct address family is `sa\_family` field.
+      - EAGAIN - For nonblocking UNIX domain sockets, this means that the socket is nonblocking and connection cannot be completed
+        immediately. For other sockets, this means there are insufficient entries in routing cache (what?)
+      - EALREADY - Socket is nonblocking and previous connection attempt is not yet completed.
+      - EBADF - sockfd is not a valid open fd.
+      - ECONNREFUSED - connect () on the stream socket found no one listening on the remote address.
+      - EFAULT - socket structure address is outside user's address space.
+      - EINPROGRESS - Socket is nonblocking and connection can't be completed immediately (for UNIX domain sockets, its EAGAIN). It's
+        possible to do `select`/`poll` for completion by selecting the socket for writing. After `select` indicates writability, use
+        `getsockopt` to read SO\_ERROR option at SOL\_SOCKET level to determine if connect completed successfully/unsuccessfully.
+      - EINTR - Syscall interrupted by another signal which was caught.
+      - EISCONN - Socket already connected.
+      - ENETUNREACH - Network is unreachable.
+      - ENOTSOCK - The fd given by sockfd is not a socket.
+      - EPROTOTYPE - Socket type doesn't support the requested protocol (eg, connecting a UNIX domain datagram socket to stream socket).
+      - ETIMEDOUT - Timeout when attempting connection - for IP sockets, timeouts maybe very long if syncookies are set.
+
+  * int accept (int sockfd, <> addr, <> addrlen)
+    - For connection based socket types.
+    - Extracts the first connection request on the queue for pending connections for the listening socket sockfd, creates a new connected
+      socket and returns a fd to this new socket. New socket is not in listening state, and sockfd is unaffected.
+
+  * int bind (int sockfd, const struct sockaddr \*addr, socklen\_t addrlen)
+    - A socket created using `socket` exists in a name space without any address assigned to it - bind assigns the address addr to sockfd.
+
+  * int listen (int sockfd, int backlog)
+    - Marks sockfd as passive socket, ie, a socket that will be used to accept incoming connection requests using `accept`. Relevant only
+      for connection based socket types.
+    - backlog specifies the max length to which the queue of pending connections for sockfd may grow. If a connection request arrives when
+      queue is full, client may receive an error (ECONNREFUSED) or if retransmission is supported by the protocol, request maybe ignored
+      so that the client may reattempt successfully.
+    - Errors
+      - EADDRINUSE - Another socket already listening on the same port.
+      - EADDRINUSE - sockfd was not bound to an address, and upon binding it to an ephemeral port, all port numbers are in use.
+      - EBADF - sockfd is not a valid file descriptor.
+      - ENOTSOCK - The fd given by sockfd is not a socket.
+      - EOPNOTSUPP - The socket type doesn't support listen.
+
+  * send
+
+  * recv
+
+  * int select (int nfds, <> readfds, <> writefds, <> exceptfds, <> timeout)
+
+  * int poll (struct pollfd \*fds, nfds\_t nfds, int timeout)
+    - Similar to select, it waits for one of a set of fd to become ready to perform I/O.
+    - `epoll` extends poll further but specific to linux.
+    - timeout is for blocking poll for an event till -
+      - an fd becomes ready
+      - call is interrupted by signal handler
+      - timeout expires
+    - Returns a non-negative value which refers to the number of elements in fds whose revents fields have been set to non-zero value (error
+      signal/event). Return value 0 refers to timeout and -1 refers to an error in execution of poll.
+    - List of bits for events/revents
+      - POLLIN - Data is available to be read.
+      - POLLPRI - An exception occurred on fd - eg, out of band data on TCP socket, cgroup.events file is modified
+      - POLLOUT - Writing is possible, but a write larger than the available space in a socket/pipe will still block.
+      - POLLRDHUP
+      - POLLERR
+      - POLLHUP
+      - POLLNVAL
+      - POLLRDNORM/POLLWRNORM - Same as POLLIN/POLLOUT
+      - POLLRDBAND
+      - POLLWRBAND
+
+    - Errors
+      - EFAULT - fds points outside the process' accessible address space.
+      - EINTR - A signal encountered before any requested event.
+      - EINVAL - nfds value exceeds the configured threshold (RLIMIT\_NOFILE).
+      - ENOMEM - Unable to allocate memory for kernel data structures.
+
+  * Glossary
+    - Out of band data
+    - Record boundary
+    - Syncookies
+
 ## Role Of Webservers
 
 ### Nginx
