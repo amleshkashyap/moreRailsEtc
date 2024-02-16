@@ -103,7 +103,8 @@
       - YAGNI - You Ain't Gonna Need It - build only what's needed
       - DRY - Don't Repeat Yourself
       - SOLID
-    - UML Diagrams
+    - UML Diagrams - UML usage has been declining for about 20 years, and has limited use due to extensive size, and limited efficiency
+      due to overuse.
       - Structural - Static system view
       - Behavioural - Dynamic system view
     - Design Patterns
@@ -179,6 +180,81 @@
            -----------------------------------------         | getID() |                      | getID() |
                                                               ---------                        ---------
     ```
+
+### Other Specifications
+  * Knowledge Discovery Metamodel (KDM)
+    - Infrastructure Layer - Provides a small common core for all other packages, inventory model of the artifacts of existing system,
+      full traceability between meta model elements as links back to the source code, and a uniform extensibility mechanism.
+      - Core package - Determines several patterns reused by other KDM packages.
+      - kdm package - 
+      - Source package -
+
+    - Program Elements Layer
+      - Code package - Programming elements, eg, data types, methods, class, variables, etc.
+      - Action package - Low level application behaviour, eg, detailed control and data flow between statements.
+
+    - Resource Layer
+      - Platform package - Operating env for the software, eg, OS, middleware, etc, including the control flow between them.
+      - UI package - User interfaces of the system.
+      - Event package - Events and state transition behaviour of the system.
+      - Data package - Artifacts for persistent data, eg, relational databases, indexed files, other data storage. 
+
+    - Abstractions Layer
+      - Conceptual package - Business domain knowledge and rules, which should be extractable from the system as well.
+      - Structure package - Organisation of the system into subsystems, layers and componenets.
+      - Build package - Engineering view of the system (?).
+
+
+### Common Object Request Broker Architecture (CORBA)
+  * Basic ([Ref](https://en.wikipedia.org/wiki/Common_Object_Request_Broker_Architecture))
+    - Facilitates communication of systems deployed on diverse platforms - enabling collaboration between different OS, programming
+      languages and hardware. Collaboration should be efficient, reliable, transparent and scalable.
+    - It uses an interface definition language to specify interfaces that objects present to others.
+    - It requires writing an object request broker (ORB) through which applications interact with other objects -
+      - Application initializes the ORB, and accesses an object adapter, which maintains reference counts, object instantiation policies
+        and object lifetime policies.
+      - Object adapter is used to register instances of the generated code classes (these classes are the result of compiling IDL code which
+        translates high level interface definition to OS and language specific class).
+    - IDL code has to be written which contains the interface to the logic exposed by the system.
+    - CORBA also addresses concerns like data types, exceptions, network protocols and communication timeouts, etc.
+    - Other concerns are left to the application, like object lifetime, redundancy, memory management, load balancing, semantics (MVC), etc.
+    - Defines - RPC, transactions and security, events, time, domain specific interface models.
+    - Softwares implementing CORBA have been found to have problems, and there's no reference implementation.
+
+  * Terms ([Ref](http://www.dre.vanderbilt.edu/~schmidt/corba-overview.html))
+    - Object - Programming entity consisting of identity, interface and implementation (known as Servant).
+    - Servant - Implementation of operations that support a CORBA IDL interface.
+    - Client - Program entity that invokes an operation on object implementation - accessing service of a remote entity should be
+      transparent as well as easy for the caller.
+    - Object Request Broker (ORB) - Mechanism for communicating client request to target object implementation. Decouples the client from
+      the details of method invocation. When a client invokes a program, ORB should find the target object implementation, activate it if
+      necessary, deliver the request to the object and return the response to the caller. (This sounds like a loader, but for distributed
+      applications?).
+    - ORB Interface - An abstract interface for an ORB, which provides various helper functions, eg, converting object references to string,
+      creating argument lists for the requests made through dynamic invocation interface.
+    - CORBA IDL stubs and skeletons - Interface between client and server. Stubs allow for RPC style requests. IDL compiler converts
+      definitions to programming language interface, reducing inconsistency and increasing optimisation opportunity.
+    - Dynamic Invocation Interface - Allows client to directly access the request mechanism from ORB. Also allows clients to make non
+      blocking synchronous and send-only calls.
+    - Dynamic Skeleton Interface - Allows ORB to deliver requests to an object implementation that doesn't have the information about the
+      type of object it is implementing at compile time. Client making request doesn't know if it's to a type specific IDL skeleton or
+      a dynamic skeleton.
+    - Object Adapter - Used by ORB to deliver requests without activating the object. Also associates the object implementations with ORB.
+      Can be used to support custom implementation style, eg, OODB object adapter for persistence, library object adapter for non remote
+      objects.
+
+  * Sources Of Complexity In Distributed Systems
+    - Inherent
+      - Addressing impact of latency
+      - Detecting and recovering from partial failures of networks and hosts
+      - Load balancing and service partitioning
+      - Consistent ordering of distributed events
+    - Accidental
+      - Lack of type safe, portable, re-entrant and extensible system call interfaces and component libraries
+      - Inadequate debugging support
+      - Widespread use of algorithmic decomposition (?)
+      - Continuous rediscovery and reinvention of core concepts and components
+
 
 ### DB Normalisation (RDBMS Only)
   * Sample User Data
@@ -295,6 +371,7 @@
     - In R3, Prices and BookSellers are free from any such transitive dependencies (eg, price doesn't depend on the weight or weight doesn't
       depend on the price, when title + cover\_type are taken out of the picture).
     - A 3NF relation R4 with 5 tables is created as below.
+
    ```
     R4
 
@@ -350,6 +427,21 @@
     associated with same Y, irrespective of Z, then there's a multivalued dependency X ->> Y.
     - Assume that with R4, everything is working fine, however, customer notifies that the sellers have expanded their operations. He also
       provides the list of books being sold as per the BookSellers table below (all other tables remain the same).
+    - R5 has 3 attributes and all 3 are prime, also part of candidate key (2NF). There's no transitive dependency yet (3NF).
+    - Picking up Drake as X[c] and combining with all other Y and Z -
+      - Drake.Drama.Omaha
+      - Drake.Drama.Juneau
+      - Drake.Drama.Marietta
+      - Drake.War.Omaha
+      - Drake.War.Juneau
+      - Drake.War.Marietta
+    - There's redundancy - table mentions that Drake sells Drama and War, in 3 tuples. Same for Erik.
+      - This a multivalued dependency seller ->> title
+
+    - Note that an assumption is made on the given data by customer that a seller sells all the books he has in all the cities he is
+      located in - this assumption can go wrong, eg, if Erik got located in Juneau now, but he isn't selling Drama there. If that was the
+      case, R6 shouldn't be created.
+
    ```
     R5
 
@@ -370,18 +462,7 @@
     | War   | Erik   | Marietta    |
     | War   | Erik   | Chillicothe |
      ------------------------------
-   ```
-    - R5 has 3 attributes and all 3 are prime, also part of candidate key (2NF). There's no transitive dependency yet (3NF).
-    - Picking up Drake as X[c] and combining with all other Y and Z -
-      - Drake.Drama.Omaha
-      - Drake.Drama.Juneau
-      - Drake.Drama.Marietta
-      - Drake.War.Omaha
-      - Drake.War.Juneau
-      - Drake.War.Marietta
-    - There's redundancy - table mentions that Drake sells Drama and War, in 3 tuples. Same for Erik.
-      - This a multivalued dependency seller ->> title
-   ```
+
     R6
 
     BookSellers
@@ -406,6 +487,3 @@
     | Erik   | Chillicothe |
      ----------------------
    ```
-    - Note that an assumption is made on the given data by customer that a seller sells all the books he has in all the cities he is
-      located in - this assumption can go wrong, eg, if Erik got located in Juneau now, but he isn't selling Drama there. If that was the
-      case, R6 shouldn't be created.

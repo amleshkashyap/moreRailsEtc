@@ -219,6 +219,12 @@
     - Operations are available to send signals when out of band data arrives (SIGURG) or socket breaks unexpectedly (SIGPIPE) for a process
       or process group. It's possible for process and process groups can receive I/O notifications and asynchronous notifications for I/O - 
       for such processes/groups, SIGIO can be set during errors.
+    - Various configurations for sockets are given [here](https://man7.org/linux/man-pages/man7/socket.7.html).
+    - For sockets of TCP protocol, multiple configurations are available to extract more performance based on the physical resources
+      available to the service. Eg, Window scaling allows the use of large TCP windows (> 64kB) to support links with high latency and/or
+      bandwidth. At least some of these configurations can be set at the socket level as well, and others are global. Configuration files
+      are available in `/proc/sys/net/ipv4/`.
+      - Configs for tcp protocol implementation are given [here](https://man7.org/linux/man-pages/man7/tcp.7.html).
 
   * int connect (int sockfd, const struct sockaddr \*addr, socklen\_t addrlen)
     - Connects the socket referred to by sockfd to the address specified by addr (whose length is given by addrlen), returning success flag.
@@ -288,21 +294,23 @@
     - Returns a non-negative value which refers to the number of elements in fds whose revents fields have been set to non-zero value (error
       signal/event). Return value 0 refers to timeout and -1 refers to an error in execution of poll.
     - List of bits for events/revents
-      - POLLIN - Data is available to be read.
-      - POLLPRI - An exception occurred on fd - eg, out of band data on TCP socket, cgroup.events file is modified
+      - POLLIN - Data is available to be read. (Also, connection setup has completed for connection oriented protocols).
+      - POLLPRI - An exception condition on fd - eg, out of band data on TCP socket, cgroup.events file is modified
       - POLLOUT - Writing is possible, but a write larger than the available space in a socket/pipe will still block.
-      - POLLRDHUP
-      - POLLERR
-      - POLLHUP
-      - POLLNVAL
+      - POLLRDHUP - Stream socket peer closed connection or shut down writing.
+      - POLLERR - Error (only written in revents, ignored in events). Also set for a fd referring to the write end of a pipe when read
+        end is closed.
+      - POLLHUP - When reading from a channel like pipe or stream socket, this indicates that the peer closed its end of the channel.
+        Subsequent reads from the channel will return 0 after all outstanding data is consumed. This is returned in revents and ignored
+        in events.
+      - POLLNVAL - Invalid request. fd not open (only in revents).
       - POLLRDNORM/POLLWRNORM - Same as POLLIN/POLLOUT
-      - POLLRDBAND
-      - POLLWRBAND
+      - POLLRDBAND/POLLWRBAND - Priority band data can be read/written.
 
     - Errors
       - EFAULT - fds points outside the process' accessible address space.
       - EINTR - A signal encountered before any requested event.
-      - EINVAL - nfds value exceeds the configured threshold (RLIMIT\_NOFILE).
+      - EINVAL - nfds value exceeds the configured threshold (RLIMIT\_NOFILE). (Also, timeout value is negative).
       - ENOMEM - Unable to allocate memory for kernel data structures.
 
   * Glossary

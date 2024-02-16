@@ -35,73 +35,7 @@
       printf("value: %s, address: %p\n", *store, address);   // value - two, address - from nptr
     ```
 
-## [Bochs](https://bochs.sourceforge.io/)
-  * Intel x86 simulator
-    - CPU
-      - 386, 486, pentium
-      - pentium 6 and ahead
-      - x86-64 extensions
-      - floating point units
-    - Common I/O Devices
-      - keyboard, mouse, VGA card/monitor, hard disk
-      - PCI, USB, CD-ROM, sound card, network card, floppy disk
-      - multiprocessors, parallel and serial ports, 3D video card, game port
-    - BIOS, CMOS
-    - Virtualization - no
-
-  * Can run on different host platforms - x86, MIPS, Sun, Alpha
-    - Due to complete hardware simulation, it's very slow
-    - Commercial emulators (vmware) achieves higher speed with virtualization, but can't run on non-x86 (or whatever they were designed for)
-
-  * Basics
-    - Bochs interacts with the host OS regularly
-    - For user input via keyboard, an event goes to device model for keyboard
-    - For disk space in the simulator, a disk image file is present on the host machine
-    - When simulator has an application that sends a network packet, Bochs uses host OS network card to send it outside
-    - Eg, sending a network packet in FreeBSD has different code than Windows XP - hence, certain features are not supported on all host OS
-
-## [QEMU](https://www.qemu.org/docs/master/system/index.html)
-  * Machine and userspace emulator, virtualizer
-    - Can emulate hardware without hardware virtualization - speed maybe better than bochs as it uses dynamic translation.
-    - Can integrate with KVM/Xen hypervisors to provide emulated hardware, letting the hypervisor manage the CPU.
-    - Can provide userspace API virtualization (linux/BSD kernels) - only CPU and syscall emulation
-
 ## Pintos
-### Basic Execution Environment
-  * Address Space
-  * Basic program execution registers
-  * x87 FPU registers
-  * MMX registers
-  * XMM registers
-  * YMM registers
-  * Bounds registers
-  * BNDCFGU and BNDSTATUS
-  * Stack
-  * Descriptor table registers - local, global and interrupt descriptor table registers (LDTR, GDTR, IDTR) - holds 32/64 bit addresses
-
-  * I/O ports
-  * Control registers
-  * Memory management registers
-  * Debug registers
-  * Memory type range registers (MTRR)
-  * Model specific registers (MSR)
-  * Machine check registers
-  * Performance monitoring counters
-
-  * Flat memory model
-    - appears as a single, contiguous address space which holds code, data and stack.
-    - linear address space (0 to 2^x - 1, x = [32,64]) - byte addressable
-  * Segmented memory model -
-    - to place code, data and stack in separate memory segments, with one component not growing too large
-  * Real address memory model
-
-  * Modes Of Operation
-    - Protected mode - any address model can be used. This is the default mode.
-    - Real address mode
-    - System management mode - processor switches to a separate address space (system management RAM)
-    - Compatibility mode
-    - 64-bit mode
-
 ### General
   * Pintos code is a mix of C and assembly code. Assembly code is used at a few places only, and critical modules like loader and
     thread switcher are written in assembly.
@@ -328,13 +262,52 @@
     - Most small requests do no require a call to page allocator - and calls to page allocator need more than 1 page can fail due to
       fragmentation.
 
-### Virtual Addresses
-
 
 ### Page Table
+  * Virtual Address
+    - Bits 0-11 - It has the page offset which is directly used as the frame's offset
+    - Bits 12-21 - 10 bits for page table index
+    - Bits 22-31 - 10 bits for page directory index
 
+  * Page Directory
+    - This stores Page Directory Entries (PDE). Each PDE has the 20 bit physical address (MSB) of a page table and 12 bit flags (LSB).
+    - First 10 bits of (1024 PDEs) of a virtual address are used to find the PDE - from the PDE, the base address of a page table is found.
+    - Page directory maybe per thread/process - in pintos, every thread holds a pointer to a page directory.
 
-### Hash Table
+  * Page Table
+    - This stores Page Table Entries (PTE). Each PTE has the 20 bit physical base address (MSB) of the page and 12 bit flags (LSB).
+    - Second 10 bits of the virtual address (1024 PTEs per page table) are used to find the PTE in that page table obtained from PDE.
+    - There are 1024 page tables (or 1 contiguous page table segmented as 1024 entries of PDE), with 1024 addresses each - accounting for
+      first 20 bits of the virtual address - 1024 * 1024 addresses with 4kB data storage starting at each address (4GB RAM).
+    - Note that page directory can be created completely at bootup as it points to 1024 addresses which can also be fixed, ie, all 1024 page
+      tables can also be initialized at their base address. However, PTEs need to be dynamic.
+    - In pintos, page directory and tables are stored in the kernel space. It's mostly the same for linux. Ideally though, it appears that
+      these tables should reside in non-pageable memory (else, PDE will also have to be dynamic - some non-pageable memory has to be used).
+
+  * Numbers
+    - Each page directory is 4kB (4 * 1024), and each page table is the same size.
+    - If a process uses all memory available for it, it'll create 768 page tables + 1 page directory ~ 3 MB memory.
+    - Each 4kB thread struct stores a pointer to a new page directory. Roughly 330 user threads can be created.
+
+  * PTE Format
+    - PTE contain 32-bit lines, where the 20 MSBs contain the physical base address. Remaining 12 bits (0-11) are given below.
+    - PTE\_P (bit 0) - Present bit. When 0, an attempt to access the page leads to page fault.
+    - PTE\_W (bit 1) - When 1, page is writable, when 0, writing leads to page fault.
+    - PTE\_U (bit 2) - When 1, user process may access the page, when 0, only kernel can access, user access leads to page fault.
+    - PTE\_A (bit 5) - Accessed bit
+    - PTE\_D (bit 6) - Dirty bit
+    - PTE\_AVL (bits 9-11) - Custom usage
+    - PTE\ADDR (bits 12-32) - 20 bits of physical frame address.
+
+  * Accessed And Dirty Bits
+    - 80x86 hardware provides assistance for implementing page replacement algorithms using these 2 bits in the PTE.
+    - At read/write to a page, accessed bit is set to 1 in PTE - at write, dirty bit is set to 1 in PTE - by the CPU. CPU doesn't reset them
+      but the OS can.
+    - Multiple pages may refer to the same frame (aliased frame) - when such a frame is accessed, these 2 bits are updated only in one of
+      the PTEs (the one currently active), not the others.
+      - In pintos, every virtual page is aliased to its kernel virtual page.
+      - Eg, when multiple processes are created that use the same executable file - then read only pages maybe shared, thus creating alias
+        frames (instead of maintaining copies of the process in memory).
 
 
 ## Executable And Linkable Format (ELF)
@@ -792,44 +765,4 @@
                         --------------------
     ```
 
-
 ## System V Application Binary Interface
-
-## List Of Standard Signals In Linux
-  * Source - [Ref1](https://faculty.cs.niu.edu/~hutchins/csci480/signals.htm), [Ref2](https://man7.org/linux/man-pages/man7/signal.7.html)
-  * Actions - Dump (Terminate and dump core). Stop (Stop/pause program)
-
-  * SIGHUP (1, POSIX) - Hangup controlling process or terminal. Terminate.
-  * SIGINT (2, POSIX) - Interrupt (Ctrl C) from keyboard. Terminate.
-  * SIGQUIT (3, POSIX) - Quit from keyboard (Ctrl \). Dump.
-  * SIGILL (4, POSIX) - Illegal instruction. Dump.
-  * SIGTRAP (5) - Breakpoint for debugging. Dump.
-  * SIGABRT (6, POSIX) - Abnormal termination. Dump.
-  * SIGIOT (6) - Equivalent to SIGABRT. Dump.
-  * SIGBUS (7) - Bus error. Dump.
-  * SIGFPE (8, POSIX) - Floating point exception. Dump.
-  * SIGKILL (9, POSIX) - Force process termination. Terminate.
-  * SIGUSR1 (10, POSIX) - Available for processes. Terminate.
-  * SIGSEGV (11, POSIX) - Invalid memory reference. Dump.
-  * SIGUSR2 (12, POSIX) - Available for processes. Terminate.
-  * SIGPIPE (13, POSIX) - Write to pipe with no readers. Terminate.
-  * SIGALRM (14, POSIX) - Real timer clock. Terminate.
-  * SIGTERM (15, POSIX) - Process termination. Terminate.
-  * SIGSTKFLT (16) - Coprocessor stack error - Terminate.
-  * SIGCHLD (17, POSIX) - Child process stopped/terminated or got a signal if tracing. Ignore.
-  * SIGCONT (18, POSIX) - Resume execution if stopped. Continue.
-  * SIGSTOP (19, POSIX) - Stop process execution via Ctrl Z. Stop.
-  * SIGSTP (20, POSIX) - Stop process issued from TTY. Stop.
-  * SIGTTIN (21, POSIX) - Background process requires input. Stop.
-  * SIGTTOU (22, POSIX) - Background process requires output. Stop.
-  * SIGURG (23) - Urgent condition on socket. Ignore.
-  * SIGXCPU (24) - CPU time limit exceeded. Dump.
-  * SIGXFSZ (25) - File size limit exceeded. Dump.
-  * SIGVTALRM (26) - Virtual timer clock. Terminate.
-  * SIGPROF (27) - Profile timer clock. Terminate.
-  * SIGWINCH (28) - Window resize. Ignore.
-  * SIGIO (29) - I/O possible. Terminate.
-  * SIGPOLL (29) - Equivalent to SIGIO. Terminate.
-  * SIGPWR (30) - Power supply failure. Terminate.
-  * SIGSYS (31) - Bad system call. Dump.
-  * SIGUNUSED (31) - Equivalent to SIGSYS. Dump
