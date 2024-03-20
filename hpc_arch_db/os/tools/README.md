@@ -309,6 +309,14 @@
       - Eg, when multiple processes are created that use the same executable file - then read only pages maybe shared, thus creating alias
         frames (instead of maintaining copies of the process in memory).
 
+  * Inverted Page Table (FreeBSD)
+    - Inverted page tables are indexed by physical address and hold the virtual address - this essentially means a linear search would be
+      required for efficient translation.
+    - Hardware computes a hash of the virtual address to find an entry in the hash anchor table (HAT).
+    - This entry points to an entry in inverted page table - in case of collision, the worst case linear search is performed.
+    - Inverted table has the benefit that it can be a global DS with only as many entries as the possible pages - unlike having page tables
+      per process. However, aliasing becomes difficult.
+
 
 ## Executable And Linkable Format (ELF)
   * [Ref](https://refspecs.linuxfoundation.org/elf/elf.pdf)

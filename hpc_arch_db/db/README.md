@@ -14,6 +14,214 @@
   * [AWS Offering](https://docs.aws.amazon.com/whitepapers/latest/aws-overview/database.html)
 
 
+## Layout And Data Structures
+  * High Level Components
+    - Query Evaluation Engine
+      - Input Parser
+      - Execution Plan Generator/Query Optimizer
+      - Query Executor
+    - Storage Subsystem - Brings the data from filesystem to main memory. Efficient data structures for main memory are not the same as the
+      ones for filesystem, hence the mapping should be efficient as well.
+      - Disk Space Manager - store physical data on disk, manage free disk space, map blocks to tracks and sectors, manage data transfer
+      - Buffer Manager - manages the limited main memory provided, called buffer (maybe a buffer pool).
+    - Transaction Processing Subsystem
+      - Logging
+      - Concurrency Control
+      - Recovery
+    - Database
+
+  * Query Evaluation
+    - query -> parser -> parse tree -> query translation and rewrite -> logical plan -> physical plan -> code generation
+    - Parse tree is fed to translation and rewrite module where it's converted to a another representation based on relational algebra
+      notation - this is useful because transformations between expressions can be easily performed to find more efficient plans.
+      - Different expressions for a query are called logical query plans, represented as expression or operator trees.
+      - Query rewriting aims to find a more efficient query which reduces the intermediate steps - however, this is based on heuristics.
+      - For join operations (three or more), find efficient queries is expensive due to larger search space.
+    - A physical plan generator then converts the logical plan to a physical one - ie, which algorithms to use for computing the relational
+      operators in the logical plan, as well as access methods for each relation (ie, how to retrieve a tuple, either via file scan which
+      retrieves all tuples or via index plus a selection condition).
+      - Each relational operator may have be implemented in different ways, and fetching of data can be done in either of the above,
+        leading to multiple physical plans for a logical plan - the physical plan generation module chooses the best it can.
+    - Query re-writing and physical plan generation are called query optimization.
+    - The best selected plan is given to code generator which can provide code that can be executed in interpreted or compiled mode based
+      on whether it'll be used immediately or later respectively.
+
+### Query Processing
+  * Codd's relational operators [Ref](http://www.cs.iit.edu/~cs561/cs425/PANDURENGAN_VIGNESHRelationalDatabaseIntro/test/rdbms.html)
+    - select
+    - join
+    - project
+    - product
+    - union
+    - intersect
+    - difference
+    - divide
+
+  * For a relational operator, several alternative algorithms are available - selection uses factors like -
+    - Size of relation
+    - Available memory in buffer pool
+    - Sort order of input data
+    - Availability of index structures
+
+  * One Dimensional Indexes
+    - Single search key which maybe composed of multiple attributes.
+    - Common DS - B/B+ Trees, hash based indexes using linear hashing - latter are more efficient for equality searches.
+    - Join operations use hash based indexes as they're more efficient due to the presence of multiple equality searches
+    - B-Trees are more efficient for range searches - B-Trees also maintained the multiple levels of index as required given the size of
+      the files. B-Trees also manage the space on the blocks they use without requiring any overflow blocks.
+    - In cases where the query requires attributes on which an index is also present, file scan can be skipped and only index is searched
+      and returned which is faster due to lesser data in indexes.
+
+  * Multi Dimensional Indexes
+    - Eg, geographical databases, inventory and sales database for decision making
+    - For data existing in 2 or more dimensions, includes operations like -
+      - Selection involving partial matches - all points within a range in each dimension
+      - Range queries - all points within a range in each dimension
+      - Neares neighbour queries
+      - Where am I queries (polygon search)
+    - Data Structures
+      - Grid file - Generalized version of 1-D hash tables. Supports range queries, partial match queries, nearest neighbour queries.
+      - Multiple key index - Useful for range and nearest neighbour queries.
+      - R-Tree -
+      - Quad tree - Supports partial match, range and nearest neighbour queries.
+      - Bitmap index - Supports range, nearest neighbour and partial match queries. Used in data warehouses.
+        - Collection of bit vectors which encodes the location of records.
+        - These indexes can get large when attributes have many values - compressed using run length encoding.
+
+  * Sorting Large Files (External Merge Sort)
+    - Multiple usages, eg, producing sorted results, eliminating duplicates during query processing, sort-merge join operation, etc.
+    - Since databases are almost always larger than the main memory, a file version of merge sort is utilised
+      - Files are broken into small pieces (sublists), sorting smaller sublists individually and then merging the produce sorted file.
+    - First Phase (Run Generation)
+      - Available buffers in main memory are filled with blocks containing data records from file on disk (`mmap`?)
+      - Sorting in memory is performed using (typical memory based) sorting algorithms (heap, quick).
+      - Sorted records are written in new blocks on disks, forming a sorted sublist containing as many blocks as available buffers.
+      - Above steps are repeated till all records are put into a sorted sublist.
+    - Second Phase (Merging)
+      - All but one memory buffer is used to hold data from a sorted sublist.
+      - Usually, number of sorted sublists are lesser than the available buffers and merging completes in one step.
+      - This is different from the usual merge sort which merges 2 runs at a time - this is a multi-way merge.
+      - When sorted sublists are more than the available buffers, multiple passes are required.
+
+  * Parse Tree
+    - m-ary tree showing the structure of a SQL query.
+    - Interior node - Non terminal symbol of SQLs grammar, with goal symbol labelling the root node.
+    - Leaf node - Tokens of the query.
+  ```
+    Query
+
+    select name
+    from department, employee
+    where id = eid and age > 25
+
+                                    <Query>
+          select      <sel-list>
+  ```
+
+  * Expression Tree
+    - Binary tree corresponding to a relational algebra expression.
+      - In relational algebra, operators can be combined into one expression by applying an operator to the result of one or two operators.
+    - Internal nodes - Stores relational algebra operations along with estimates for result sizes.
+    - Leaf nodes - Stores input relations of the query.
+
+  * Histograms
+    - When choosing a logical query plan, or constructing a physical query plan from a logical one, query evaluation engine needs info to
+      estimate the cost of evaluating the expressions in a query - this is based on parameters like -
+      - Size of intermediate results
+      - Size of output
+      - Algorithms chosen for operators
+      - Statistics - number of tuples in a relation, number of disk blocks used, available indexes
+    - DB can frequently calculate the above statistics, especially if DB changes frequently - this helps with more accurate cost estimates.
+      - But gathering the statistics leads to overhead - systems are forced to gather data periodically, often during query runtime, and
+        also allowing a periodic refresh of statistics.
+    - Couting the exact occurrence of values is not an option in large databases - they must store approximations. Histograms are used
+      for this purpose - to approximate the values for a given attribute. Histograms are more accurate than assuming a uniform distribution.
+      - For join operations, which are the most expensive, having such statistics helps with query plan selection by providing reasonable
+        estimates.
+      - When number of buckets get large, histograms can be compressed by combining buckets with similar distribution.
+    - Equiwidth - Value range is divided in buckets of equal size.
+      - These provide better estimates for infrequently appearing values.
+    - Equidepth - Value range is divided so that number of tuples in each bucket is same (with some delta).
+      - Usually, these histograms are more accurate because more frequently occuring values are often fewer, leading to these values
+        becoming more prominent (ie, having a bucket of their own, or shared with fewer values) - less frequently occuring values are
+        grouped in buckets with many values and their estimation accuracy is lowered.
+      - Histograms must be implemented to dynamically update the buckets.
+      - Ex. assume a table with 50 tuples with 10 tuples having a value of 5 for a certain attribute (values can be integers ranging from
+        1 to 100) - then the equidepth histogram might have these buckets for that attribute - (1-4) - 7 values, (5) - 10 values,
+        (6-40) - 12 values, (41-75) - 12 values, (76-100) - 9 values.
+    - 1-D histograms are used by query optimizers of all major DBMS, with some using a combination of equidepth and equiwidth histogram.
+
+
+### Buffer Management
+  * Operations of a buffer manager are very similar to that of the pintos' frame and swap table managers.
+    - It's partitioned into array of frames, with every frame containing a page.
+    - Typically, a page in buffer is mapped to a block of a file so that read/write requires 1 disk access.
+    - Application programs and queries make a request to buffer manager when they need a block from disk - if already present in main
+      memory, its address is returned, else, space is allocated in the buffer, evicting another page (in this case, it stores a file block)
+      if required, with the displaced block written to disk if dirty - requested block is brought to the alloted slot and address is given.
+
+  * Segments (similar to the one in ELF binaries) are also utilised for fine grain control over data movement/processing (by defining
+    additional attributes). Segments are ordered sequence of pages, organised as a contiguous area of a buffer. Data items are managed so
+    that page borders are respected.
+    - Mapping segments to file should be done in a way that preserves the benefits provided by a "file" - distributing a segment across
+      multiple files has been found to be unfavourable, like distributing data over several pages.
+    - A segment is assigned to one file, and multiple segments can be stored in a file. Also, page size = block size. With this info,
+      four types of mappings described. Note that the discussion is about storing the main memory segments to file (not the other way),
+      with the segments being created/updated during runtime (ie, a create/update operation, not a read operation) - it addresses how to
+      efficiently store this new data to file.
+
+  * Direct Page Addressing - Assumes an implicit mapping between pages of a segment and blocks of a file.
+    - The mapping is given by a simple formula, and the mapping usually is a 1:1 (ie, for a segment with s pages, and a file with d blocks,
+      s = d - only 1 segment in a file). However, this 1:1 mapping is the only setting where segments can grow dynamically, else if there
+      were other segments, then they'd usually be arranged one after the other, leaving no room for growth (except perhaps for the last
+      segment).
+    - The problem with this setup is that all the storage needs to be allocated beforehand, ie, blocks even for empty pages - for segments
+      whose data grows slowly, this leads to a low storage utilization.
+
+  * Indirect Page Addressing - Offers flexibility for allocation of blocks, and dynamic extension, using 2 auxiliary data structures.
+    - Each segment is associated with a page table - this table contains the page to block mapping for each page of the segment, with empty
+      pages holding a null value.
+    - Each file is associated with a bit table - this bit table maintains info about which blocks are free and occupied. This enables for
+      dynamic assignment between pages and blocks (however, they won't necessarily be contiguous now).
+    - While it provides flexibility, it suffers from additional problems - the page tables and bit table will require memory, and for large
+      data size, they are often split (or multilevel tables as the OS page tables) - they should also be managed in a special buffer (which
+      should preferably be non-pageable). It's also possible that if a page is to be provisioned which is not in buffer, then first the
+      page table has to be loaded, followed by loading the actual page (possibly 2 frame evictions).
+
+  * Above methods assume that a modified page is written back to the same block assigned earlier (in place update).
+    - If an error occurs during transaction due to direct placement of updated pages, recovery manager has to provide information to restore
+      the old state of a page - for large volumes of data, this will lead to a major performance impact, and updates in a page are performed
+      in a manner that the old state of the page is available till the end of transaction.
+
+  * Twin Slot Method - A modification of direct page addressing, it causes low costs for recovery, however, offsetting the positives by
+    utilizing double the disk space.
+    - Instead of 1:1 mapping of page to block (assume 1:1 mapping in segment to file), its 1:2, 2 continous blocks for each page.
+    - At the beginning of the transaction, one block keeps the current page state, while other one is to be used for writing updates.
+    - When reading a page, both the blocks are read, and most recent one is picked up - then this block is written to the block which had
+      the older state (wouldn't this be a consistency issue, assuming transactions write to blocks before completing?)
+    - Using page locks, transaction based recovery can be performed without using logs.
+
+  * Shadow Paging - Extension of indirect page addressing, and supports indirect updates of changes.
+    - Save points - Transactions are considered atomic, but subtransactions are utilised to have intermediate save points - a rollback can
+      be performed to the previous save point, if required, instead to the beginning of transaction - updates at save points are invisible
+      to other transactions.
+    - Before beginning a new save interval (between two save points), contents of current pages of a segment duplicated to a shadow page
+      which serve as a backup - this segment (ie, pages, page table and bit table) is the written to the original blocks in the disk as
+      consistent snapshots.
+    - During the save interval, any changes made to the segment are made on the duplicated pages/tables, and if required to write, they're
+      written to free blocks on file, not to original blocks - at new save interval, these duplicates which have changed are written back
+      to the disk (not necessarily the original blocks as in indirect page addressing) - blocks containing the older state of the segment
+      are freed.
+    - During an error in transaction, one can rollback to the previous data version (which was duplicated at the beginning of save interval).
+    - Save points are oriented towards segments, and recovery is segment oriented - for transaction oriented recovery, additional logs
+      have to be utilised.
+
+
+### Disk Space Management
+  * Record Organization
+  * Page Organization
+  * File Organization
+
 ## ODBC - Open Database Connectivity
   * Standard API for accessing DBMS.
   * Independent of database and OS, portable.
