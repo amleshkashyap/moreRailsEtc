@@ -15,6 +15,7 @@
 
 
 ## Layout And Data Structures
+  * [Ref](https://www.cise.ufl.edu/~mschneid/Research/papers/HS05BoCh.pdf)
   * High Level Components
     - Query Evaluation Engine
       - Input Parser
@@ -151,6 +152,41 @@
         (6-40) - 12 values, (41-75) - 12 values, (76-100) - 9 values.
     - 1-D histograms are used by query optimizers of all major DBMS, with some using a combination of equidepth and equiwidth histogram.
 
+  * Query Execution ([Ref](https://web.stanford.edu/class/cs245/slides/06-Query-Execution.pdf))
+    - Interpreted - This is simple to implement - eg, for project operator, run a loop to fetch the next tuple matching the given condition,
+      write the tuple, or break if it's null.
+      - Most transactional databases (eg, MySQL) use this method.
+    - Vectorized - Interpreted plan execution is slow due to many virtual function calls and branching for each record.
+      - This method is also interpreted but it's done in batches - values are stored in arrays with a bitmask to mark nulls.
+      - SIMD instructions are utilised to take the benefit of available computing units - batches usually fit in L1/L2 cache.
+      - This works faster for multiple record processing without much change to existing code - however, there can be lot of null values in
+        batches.
+      - Most analytical systems (eg, SparkSQL) and machine learning libraries (eg, Tensorflow) use this method, along with compilation for
+        some use cases.
+    - Compiled - Possibly the fastest method due to many existing optimisations available in compiler theory.
+      - However, implementation can be complex, and compilation can be time consuming - generated code may still be slower.
+      - Mostly used by analytical systems/ML libraries.
+
+
+### System R
+  * Phase 0
+  * Phase 1
+    - Compilation
+    - RSS Access Paths
+    - Optimiser
+    - Views And Authorization
+    - Recovery Subsystem
+    - Locking Subsystem
+  * Phase 2
+    - General User Comments
+    - SQL Language
+    - Compilation
+    - Available Access Paths
+    - Optimiser
+    - Views And Authorization
+    - Recovery Subsystem
+    - Locking Subsystem
+    - Convoy Phenomenon
 
 ### Buffer Management
   * Operations of a buffer manager are very similar to that of the pintos' frame and swap table managers.
@@ -218,9 +254,116 @@
 
 
 ### Disk Space Management
+  * Section assumes `file ~ (main memory) segment` and `block ~ (virtual/physical) page`
   * Record Organization
+    - Attribute values can be upto several bytes - they're represented by fields. Fields are organised into records (ie, tuples)
+    - Records have to be placed in a block of file - file can contain multiple records.
+    - Fixed Length Records - All records in a file have a fixed length.
+      - Fields of a record have a fixed length and are stored consecutively - base address and this size can be used for accessing fields.
+      - Record and field information are stored in a data dictionary.
+      - These are easy to manage and allows using efficient search method, but can lead to wasted storage space.
+
+    - Variable Length Records - If a record has a fixed number of fields (usual case with RDBMS), variable length records would mean that
+      fields have different lengths, eg, string fields.
+      - One way to store them is to have consecutive fields separated by a reserved separator and terminator symbols - however, to find a
+        particular field within a record, all other fields might need to be scanned.
+      - To overcome the above, one can have a field starting with a counter indicating the actual length of the field, instead of separator.
+      - Another way would be to store a header before a record - this includes metadata about the record, storing offsets for every field.
+        This provides faster access as well as extensible fields.
+      - However, this leads to additional storage space, as well as shifting of all consecutive fields due to change in one field. Also,
+        the extension can lead to the record growing beyond the boundary of the page assigned to it (and any other adjacent record which had
+        also fit in the same page earlier - a cascading scenario) - this would require moving the record(s) to another page and updating
+        the page table (more synchronisation and performance effects) - this assumes that one or more records can fit in a page.
+
+    - Large Objects (lobs) - A single record or a field of a record can require multiple pages (eg, images, videos, spatial data - can be
+      upto gigabytes) - these entities are called large objects - binary lobs (blobs) for large byte sequences and character lobs (clobs)
+      for large strings. If a lob record has some non-lob fields, only they're stored in the original page for the record.
+      - Usually, a lob is subdivided into a collection of linked pages - this setup is called spanned (ie, record spanning multiple pages).
+      - The original page (for the record) can contain a pointer (called page reference) instead of the lob field - this points to a linked
+        page or block list containing the lob - CRUD on the lob is simple but at least 2 memory accesses are required.
+      - Another way used is to store a lob directory as an attribute in the page for the record - directory can contain lob size, other
+        metadata and a page reference list which points to individual pages or blocks. Here, direct access to specific data is possible, but
+        the directory should not be too large, thus limiting the info it can store about the lob (lob can't grow too large as well as page
+        references for each can't be stored) - sometimes the lob directory size can grow so that it needs a lob itself for storage.
+      - Third way is to use positional B+ trees - it stores relative byte positions in its inner nodes as separators, and leaf nodes contain
+        the actual data pages of the lob - original page of record stores a pointer to the root of this tree.
+
   * Page Organization
+    - To reference a record stored in page/block, a pointer suffices.
+    - Physical pointers - Stores physical address of a record on disk/virtual storage and can lead to the actual page location with almost no
+      further computation (only mechanical movement) - access is fast but moving the record within a page is almost impossible because all
+      pointers to the record have to be changed.
+      - To address the above, such a physical pointer is often given by (p, n), where p is the page address and n is an implementation
+        specific value to locate the record within the page, eg, relative byte address in a page, slot number, directory index in a page
+        header, etc.
+
+    - Logical pointers - These are stable against any movement of the record in main memory, and record is mapped with a logical address
+      which is not coupled with the storage - this is part of indirect page addressing - when moving a record, an entry in the translation
+      table has to be updated, and no other pointers need to change. It comes with the drawbacks of indirect addressing given earlier.
+
+    - Fixed length records - Page is a collection of slots (eg, as in a page table, 1024 PTE slots), where a record can occupy a slot - a
+      page can hence contain as many records as slots (minus the slots occupied for storing metadata like directories and pointers to other
+      pages)
+      - One can store N records in first N slots - when deleting a record in i < N slot, one could move the last record in slot N to the
+        the slot being deleted - however, this can mean the slot number has to be updated in unknown pointers referencing the record (ie,
+        the record is pinned - for known pointers, it would not need a change based on the way (p, n) is implemented). This packed
+        organization allows for faster access though.
+      - Another way is to manage deletion at page level - and maintaining a bitmap of free slots. Here, retrieving index i or finding the
+        next free slot in the page requires traversing the bitmap - finding next free slot can be faster if a "special field" in the header
+        can be assigned for storing the first slot which is marked deleted - now when another slot is marked deleted, then that slot can
+        be stored in the "special field", while the content of this field can be the address of previous field being removed - thus a chain
+        of free slots can be created (and freed up or utilized as desirable). Note that slot number "n" remains constant in this approach.
+
+    - Variable length records - Above approach can't be simply used for such records - during insertion, one needs to find a slot which is
+      large enough to hold the record (different sized slots can be implemented by having such heterogeneity within a page or having
+      dedicated pages for certain slot sizes, etc - this is similar to malloc/palloc in pintos and leads to similar problems) - resulting
+      memory fragmentation needs to be handled by moving the records within a page. 
+      - A flexible organization of such records is provided by tuple identifier (TID) - each record is assigned a unique stable pointer
+        consisting of a page number and an index in a page directory. This entry at index i contains offset of slot i and pointer to
+        record i on the page (this seems similar to the segment-wise page table in indirect page addressing) - length info can be stored
+        either in a directory entry or at beginning of the record. Records which grow/shrink can be moved on the page without changing TID.
+      - 
+
   * File Organization
+    - Types - files of unordered records (heap files), files of ordered records (sorted files), files with dispersed records (hash files),
+      tree based files (index structures)
+    - Heap files - Records are inserted in their chronological sequence. (**Revise**)
+      - To support scans, the assigned pages have to be managed for each record - also, pages containing free space have to be managed for
+        efficient insertions (eg, bit table).
+      - Above can be implemented by maintaining a doubly linked list of pages, or directories of pages using both page numbers for page
+        addressing.
+      - For the first method above, DBMS uses a header file which is the first page of a heap file, containing address of first data page and
+        information about free space available in pages.
+      - For the second method, a directory represents a collection of pages and can be organised as a linked list - each directory entry
+        points to a page of the heap file - this entry has a counter too which denotes the free space on that page. When inserting a record,
+        its length can be compared against this counter.
+
+    - Sorted files - Orders the records based on the values of one or more fields (called ordering fields) - when the ordering field is the
+      key field (ie, has a unique value for each record), then its an ordering key. When all records are of same size, a binary search can
+      be performed on ordering key for faster file access/scan.
+
+    - Hash files - Distribution of records of a file into buckets organized as heaps, based on the value of a search key using a hash
+      function. Each bucket consists of one or more pages of records.
+      - Bucket directory, an array of pointers, is used to manage the buckets - entry at index i points to first page of the bucket i.
+      - Within a bucket, all pages are organised as a linked list - when a record needs to be inserted, it's usually at the last page in
+        linked list, hence a pointer to last page is also maintained.
+      - When last page has no space left, overflow pages are used - this is called a static hash file - it often leads to long chain of
+        overflow pages. Dynamic hash files allow for variable buckets to avoid multiple overflow pages.
+      - Extensible hash files maintain a directory structure for efficient insertion/deletion without any overflow pages.
+      - Linear hash files allow for creation of new buckets which allows insertion/deletion without a directory structure.
+
+    - Index structures - Tree based file organization based on search key in values to speed up access to records.
+      - Primary organization - If the index structure contains search key information along with an embedding of respective records.
+      - Secondary organization - If the index structure contains search key information along with TIDs or TID lists to the actual record
+        stored in a separate file structure (heap files or sorted files).
+      - Dense index - If the index contains at least one index entry for each search key value which is part of a record in the indexed file.
+        When it contains an entry for each page of records in the indexed file, then it's a sparse index. Dense index would mean every record
+        is indexed and hence more memory consuming (but usually faster).
+      - Clustered index - If the logical order of records is almost equal to their physical order, ie, records belonging together logically
+        are stored on adjacent pages (else, non-clustered index).
+      - 1-D index - Linear order is defined on the "set of search key values" used for organizing index entries - in multi-dimensional
+        indexes, such an order is not defined and entries are organized according to spatial relationships.
+      - Single/multi level index - Index only consists of a single/multiple files.
 
 ## ODBC - Open Database Connectivity
   * Standard API for accessing DBMS.
