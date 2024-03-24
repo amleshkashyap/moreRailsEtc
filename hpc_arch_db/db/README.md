@@ -49,9 +49,9 @@
 
 ### Query Processing
   * Codd's relational operators [Ref](http://www.cs.iit.edu/~cs561/cs425/PANDURENGAN_VIGNESHRelationalDatabaseIntro/test/rdbms.html)
-    - select
+    - select (sel)
     - join
-    - project
+    - project  (pie)
     - product
     - union
     - intersect
@@ -108,6 +108,7 @@
     - m-ary tree showing the structure of a SQL query.
     - Interior node - Non terminal symbol of SQLs grammar, with goal symbol labelling the root node.
     - Leaf node - Tokens of the query.
+    - A parse tree is valid if it conforms to the syntactic rules of grammar as well as the semantic rules while using schema names.
   ```
     Query
 
@@ -115,15 +116,81 @@
     from department, employee
     where id = eid and age > 25
 
-                                    <Query>
-          select      <sel-list>
+    Parse Tree (based on a certain grammar)
+                                                                    <Query>
+                                                                       |
+                                                                       |
+                                                                     <sfw> (select from where)
+
+
+       select   <sel-list>   from            <from-list>             where                       <condition>
+                    |                       /    |      \                                  /            |          \
+                    |                      /     |       \                                /             |           \
+                <attribute>         <relation>   ,     <from-list>             <condition>             and            <condition>
+                    |                   |                 |                 /       |      \                          /    |    \
+                    |                   |                 |                /        |       \                        /     |     \
+                   name             department         <relation>     <attribute>   =    <attribute>         <attribute>   >   <pattern>
+                                                          |                |                 |                   |                |
+                                                          |                |                 |                   |                |
+                                                       employee           id                eid                 age               25
   ```
 
   * Expression Tree
     - Binary tree corresponding to a relational algebra expression.
       - In relational algebra, operators can be combined into one expression by applying an operator to the result of one or two operators.
-    - Internal nodes - Stores relational algebra operations along with estimates for result sizes.
-    - Leaf nodes - Stores input relations of the query.
+    - Basic expression tree for logical query plans for a query is given below.
+      - Internal nodes - Stores relational algebra operations along with estimates for result sizes.
+      - Leaf nodes - Stores input relations of the query.
+    - Execution of an expression tree consists of executing an internal node operation whenever its operands are available and replacing that
+      internal node by the resulting relation - execution terminates when the root node is executed to produce the result relation.
+    - The expression tree for a physical query plan will require more details than the one for logical query plans.
+      - Internal nodes - Contains info like operation being performed, required params, algorithm to be used, info about intermediate
+        result that need storage (materialization) and pipelining being used, expected number of buffers required for the operation.
+      - Leaf nodes - Table names replaced by scan operators, eg, TableScan, IndexScan, etc.
+    - In general, join operations perform best when the left argument is smaller than the right one - most query optimizers use this info
+      and prune a large portion of the entire search space, focusing on left deep trees.
+    - Left deep tree is an expression tree in which the right child of each join is a leaf. Two advantages -
+      - For a given number of leaves, number of left deep trees is not as large as the number of all trees - this enables the query processor
+        to consider more relations than usually possible.
+      - Also, left deep trees supports with generation of more efficient plans by avoiding materialization of join results - in most join
+        algorithms, inner table must be materialized as entire inner table is examined against each tuple of outer table - in left deep tree,
+        inner tables exist as base tables and are already materialized.
+      - DB2, MS SQL, Oracle, etc search for left deep trees using DP. Oracle also searches for right deep trees.
+      - Sybase ASE allows the user to explicitly edit the query plans. DB2 allows users to adjust the optimisation level which is a param
+        to effect the number of plans considered by optimizer.
+  ```
+   Query
+
+   select name from department as d, employee as e
+   where d.id = e.eid
+   and d.type = 'accounts'
+   and e.age > 25
+
+   Expression Trees For Equivalent Logical Query Plans
+
+
+           pie (name)                  pie (name)                                          pie (name)
+            |                           |                                                   |
+            |                           |                                                   |
+          sel (age > 25)              sel (age > 25 and type = 'accounts')                 sel (type = 'accounts')
+            |                           |                                                   |
+            |                           |                                                   |
+          join                        join                                                 join
+       (id = eid)                    (id = eid)                                           (id = eid)
+        /       \                     /      \                                            /       \
+       /         \                   /        \                                          /         \
+      /       employee         department    employee                            department      sel (age > 25)
+     sel                                                                                           \
+ (type = 'accounts')                                                                                \
+     /                                                                                            employee
+    /
+  department
+
+
+      left deep tree              nonlinear/bushy tree                                    right deep tree
+
+  ```
+
 
   * Histograms
     - When choosing a logical query plan, or constructing a physical query plan from a logical one, query evaluation engine needs info to
@@ -254,7 +321,7 @@
 
 
 ### Disk Space Management
-  * Section assumes `file ~ (main memory) segment` and `block ~ (virtual/physical) page`
+  * Section assumes `file ~ (main memory) segment`, `block ~ (virtual/physical) page`, `field ~ attribute`, `record ~ tuple`
   * Record Organization
     - Attribute values can be upto several bytes - they're represented by fields. Fields are organised into records (ie, tuples)
     - Records have to be placed in a block of file - file can contain multiple records.
@@ -303,7 +370,7 @@
 
     - Fixed length records - Page is a collection of slots (eg, as in a page table, 1024 PTE slots), where a record can occupy a slot - a
       page can hence contain as many records as slots (minus the slots occupied for storing metadata like directories and pointers to other
-      pages)
+      pages). Note that deletion of records need to be tracked to reduce storage wastage, and is considered primary problem below.
       - One can store N records in first N slots - when deleting a record in i < N slot, one could move the last record in slot N to the
         the slot being deleted - however, this can mean the slot number has to be updated in unknown pointers referencing the record (ie,
         the record is pinned - for known pointers, it would not need a change based on the way (p, n) is implemented). This packed
@@ -322,7 +389,20 @@
         consisting of a page number and an index in a page directory. This entry at index i contains offset of slot i and pointer to
         record i on the page (this seems similar to the segment-wise page table in indirect page addressing) - length info can be stored
         either in a directory entry or at beginning of the record. Records which grow/shrink can be moved on the page without changing TID.
-      - 
+      - As given above, it can be impractical to divide a page into predefined slots - instead, free disk space management is needed on
+        each page. A pointer to the beginning of free space can be maintained in the header - if a record can't fit in the available free
+        space, page can be compressed/defragmented and records can be placed consecutively. Maximum free space can be obtained which is
+        present after the records.
+      - If defragmentation doesn't provide sufficient space for a record, then it is moved to an overflow page - a proxy TID can be
+        maintained in the main page for the record instead of the actual record - the proxy TID denotes the presence of a record in an
+        overflow page. However, a record in overflow page is not allowed to move to another overflow page (in case the overflow page needs
+        some kind of readjustment), ie, a situation is not created where main page points to overflow page 1 which then points to overflow
+        page 2 - instead, attempts are made to place it in the main page, failing which it's placed in a new overflow page. While it appears
+        that the overflow page is also used for placement of other records, it's not clear what happens to the status of such a page (ie,
+        is it still called an overflow page when the primary record it was meant for is gone?).
+      - When a record is deleted, it's just marked as deleted as immediate compression would lead to change in the indices for the other
+        records (which would then require a full bitmap synchronization). When a new record is inserted, first entry of the bitmap marked
+        as deleted is selected for creating the new TID to point to the new record - this suggests that TID is coupled with the slot index.
 
   * File Organization
     - Types - files of unordered records (heap files), files of ordered records (sorted files), files with dispersed records (hash files),
